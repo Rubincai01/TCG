@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PTCG × OPCG 大师图鉴 v3 — 真实卡图+市场价格</title>
+<style>
+  :root {
+    --bg: #0a0a0f; --card-bg: #161622; --border: #2a2a3e;
+    --accent-gold: #d4a853; --accent-red: #c0392b; --accent-blue: #2980b9;
+    --text: #e8e8f0; --text-dim: #8888aa; --ptcg-color: #ffcb05; --opcg-color: #e74c3c;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.6;
+    background-image:
+      radial-gradient(ellipse at 5% 10%, rgba(212,168,83,0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 95% 90%, rgba(231,76,60,0.06) 0%, transparent 50%);
+    min-height: 100vh;
+  }
+
+  /* ===== HEADER ===== */
+  .header {
+    text-align: center; padding: 30px 20px 20px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(212,168,83,0.08) 0%, transparent 100%);
+  }
+  .header h1 {
+    font-size: 1.8em; font-weight: 800;
+    background: linear-gradient(135deg, var(--ptcg-color), var(--opcg-color), var(--accent-gold));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .header .subtitle { font-size: 0.85em; color: var(--text-dim); max-width: 700px; margin: 6px auto 0; }
+  .header .stats { display: flex; justify-content: center; gap: 20px; margin-top: 14px; flex-wrap: wrap; }
+  .stat-item { text-align: center; }
+  .stat-num { font-size: 1.4em; font-weight: 700; }
+  .stat-label { font-size: 0.75em; color: var(--text-dim); }
+
+  /* ===== NAV TABS with PTCG/OPCG grouping ===== */
+  .nav-tabs {
+    display: flex; justify-content: center; gap: 3px; padding: 10px 16px;
+    background: rgba(0,0,0,0.4); border-bottom: 1px solid var(--border);
+    flex-wrap: wrap; position: sticky; top: 0; z-index: 100;
+  }
+  .nav-group-label {
+    font-size: 0.65em; font-weight: 700; padding: 4px 8px; color: var(--text-dim);
+    align-self: center; letter-spacing: 1px; text-transform: uppercase;
+  }
+  .nav-group-label.ptcg { color: var(--ptcg-color); }
+  .nav-group-label.opcg { color: var(--opcg-color); }
+  .nav-sep { width: 1px; background: var(--border); margin: 4px 6px; align-self: stretch; }
+  .nav-tab {
+    padding: 6px 12px; cursor: pointer; border-radius: 6px; font-size: 0.78em;
+    font-weight: 600; transition: all 0.2s; background: transparent;
+    border: 1px solid transparent; color: var(--text-dim); white-space: nowrap;
+  }
+  .nav-tab:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+  .nav-tab.active { background: var(--card-bg); border-color: var(--accent-gold); color: var(--accent-gold); }
+  .nav-tab.ptcg-tab.active { border-color: var(--ptcg-color); color: var(--ptcg-color); }
+  .nav-tab.opcg-tab.active { border-color: var(--opcg-color); color: var(--opcg-color); }
+
+  /* ===== SECTIONS ===== */
+  .section { display: none; padding: 18px 16px 50px; max-width: 1500px; margin: 0 auto; }
+  .section.active { display: block; }
+  .category-group { margin-bottom: 30px; }
+  .category-header {
+    font-size: 1.15em; font-weight: 700; margin-bottom: 8px; padding-bottom: 6px;
+    border-bottom: 2px solid var(--border); display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.55em;
+    font-weight: 600; vertical-align: middle;
+  }
+  .badge-ptcg { background: var(--ptcg-color); color: #000; }
+  .badge-opcg { background: var(--opcg-color); color: #fff; }
+  .badge-hot { background: #ff4757; color: #fff; }
+  .badge-anniversary { background: var(--accent-gold); color: #000; }
+  .badge-collab { background: #1abc9c; color: #000; }
+  .badge-exclusive { background: #3498db; color: #fff; }
+  .category-desc { color: var(--text-dim); font-size: 0.82em; margin-bottom: 12px; line-height: 1.6; }
+
+  /* ===== CARD GRID - compact ===== */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
+  }
+  @media (min-width: 1200px) {
+    .card-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+  }
+
+  /* ===== CARD ITEM ===== */
+  .card-item {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 8px; overflow: hidden; transition: all 0.3s;
+    display: flex; flex-direction: column; cursor: pointer;
+  }
+  .card-item:hover {
+    transform: translateY(-3px); border-color: var(--accent-gold);
+    box-shadow: 0 8px 24px rgba(212,168,83,0.15);
+  }
+
+  /* ===== CARD IMAGE - sized to ~1/3 of original ===== */
+  .card-img-wrap {
+    width: 100%; overflow: hidden;
+    background: #111; position: relative; display: flex;
+    align-items: center; justify-content: center;
+    height: 200px;
+  }
+  .card-img-wrap img {
+    max-width: 95%; max-height: 190px; object-fit: contain;
+    transition: transform 0.4s;
+  }
+  .card-item:hover .card-img-wrap img { transform: scale(1.08); }
+
+  .img-error-overlay {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    background: linear-gradient(135deg, #1a1a2e, #16213e); color: var(--text-dim);
+    font-size: 1.2em; gap: 2px;
+  }
+  .img-error-overlay small { font-size: 0.4em; opacity: 0.6; }
+
+  /* ===== BADGE OVERLAY - moved to BOTTOM of image, semi-transparent ===== */
+  .card-overlay {
+    position: absolute; bottom: 4px; left: 4px; right: 4px;
+    display: flex; justify-content: space-between; pointer-events: none;
+    align-items: flex-end;
+  }
+  .rarity-badge {
+    padding: 1px 6px; border-radius: 4px; font-size: 0.6em;
+    font-weight: 700; text-transform: uppercase;
+    background: rgba(0,0,0,0.7) !important; color: #fff !important;
+    backdrop-filter: blur(4px); max-width: 60%; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap;
+  }
+  .lang-badge {
+    padding: 1px 5px; border-radius: 4px; font-size: 0.58em;
+    font-weight: 600; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); color: #ccc;
+  }
+
+  /* ===== CARD BODY ===== */
+  .card-body { padding: 8px 10px; flex: 1; display: flex; flex-direction: column; }
+  .card-name {
+    font-size: 0.85em; font-weight: 700; margin-bottom: 1px;
+    display: flex; align-items: center; gap: 4px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .card-number { color: var(--accent-gold); font-family: monospace; font-size: 0.75em; flex-shrink: 0; }
+  .card-source {
+    font-size: 0.68em; color: var(--text-dim); margin-bottom: 4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .card-meta {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: auto; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.06);
+  }
+  .price-info { text-align: right; }
+  .price-value { font-size: 0.9em; font-weight: 700; color: var(--accent-gold); }
+  .price-note { font-size: 0.58em; color: var(--text-dim); }
+  .attr-tags { display: flex; gap: 3px; flex-wrap: wrap; }
+  .attr-tag {
+    font-size: 0.6em; padding: 1px 5px; border-radius: 3px;
+    background: rgba(255,255,255,0.06); color: var(--text-dim);
+  }
+
+  /* ===== LIGHTBOX ===== */
+  .lightbox {
+    display: none; position: fixed; inset: 0; z-index: 9999;
+    background: rgba(0,0,0,0.92); backdrop-filter: blur(8px);
+    align-items: center; justify-content: center; flex-direction: column;
+    cursor: pointer;
+  }
+  .lightbox.open { display: flex; }
+  .lightbox img {
+    max-width: 90vw; max-height: 80vh; object-fit: contain;
+    border-radius: 8px; box-shadow: 0 0 60px rgba(212,168,83,0.3);
+    animation: lbFadeIn 0.3s ease;
+  }
+  .lightbox-info {
+    color: #fff; text-align: center; margin-top: 12px; font-size: 0.9em;
+    max-width: 500px;
+  }
+  .lightbox-info .lb-name { font-weight: 700; font-size: 1.1em; }
+  .lightbox-info .lb-detail { color: var(--text-dim); font-size: 0.8em; margin-top: 4px; }
+  .lightbox-close {
+    position: absolute; top: 20px; right: 24px; font-size: 2em;
+    color: #fff; cursor: pointer; opacity: 0.7; transition: opacity 0.2s;
+    background: none; border: none;
+  }
+  .lightbox-close:hover { opacity: 1; }
+  @keyframes lbFadeIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+
+  /* ===== FOOTER ===== */
+  .footer {
+    text-align: center; padding: 24px 20px; color: var(--text-dim);
+    font-size: 0.72em; border-top: 1px solid var(--border);
+  }
+  .footer a { color: var(--accent-gold); text-decoration: none; }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  @media (max-width: 768px) {
+    .header h1 { font-size: 1.3em; }
+    .card-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+    .nav-tab { padding: 5px 8px; font-size: 0.72em; }
+    .card-img-wrap { height: 160px; }
+    .card-img-wrap img { max-height: 150px; }
+    .nav-group-label { display: none; }
+    .nav-sep { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
+  <button class="lightbox-close" onclick="closeLightbox(event)">&times;</button>
+  <img id="lb-img" src="" alt="">
+  <div class="lightbox-info">
+    <div class="lb-name" id="lb-name"></div>
+    <div class="lb-detail" id="lb-detail"></div>
+  </div>
+</div>
+
+<div class="header">
+  <h1>PTCG × OPCG 大师图鉴</h1>
+  <p class="subtitle">真实卡图 · TCGPlayer市场价 · 点击卡牌可放大 | 更新: 2026.04</p>
+  <div class="stats" id="topStats"></div>
+</div>
+
+<div class="nav-tabs" id="navTabs">
+  <span class="nav-group-label" style="color:#ff4757">HOT</span>
+  <div class="nav-tab active" data-target="sec-featured">🔥 高价稀有</div>
+  <div class="nav-sep"></div>
+  <span class="nav-group-label ptcg">PTCG</span>
+  <div class="nav-tab ptcg-tab" data-target="sec-151">🎴 151 初代</div>
+  <div class="nav-tab ptcg-tab" data-target="sec-sv8pt5">✨ 棱镜进化</div>
+  <div class="nav-tab ptcg-tab" data-target="sec-sv8">⚡ 涌动电光</div>
+  <div class="nav-tab ptcg-tab" data-target="sec-sv1">🟡 朱紫基础</div>
+  <div class="nav-tab ptcg-tab" data-target="sec-sv2">🟢 帕底亚进化</div>
+  <div class="nav-tab ptcg-tab" data-target="sec-sv3">🔴 黑曜烈焰</div>
+  <div class="nav-tab ptcg-tab" data-target="sec-ptcg-chs">🇨🇳 简中独占</div>
+  <div class="nav-tab ptcg-tab" data-target="sec-cel25">🎂 25周年</div>
+  <div class="nav-tab ptcg-tab" data-target="sec-mcd">🍔 麦当劳</div>
+  <div class="nav-sep"></div>
+  <span class="nav-group-label opcg">OPCG</span>
+  <div class="nav-tab opcg-tab" data-target="sec-opcg-anniv">🎉 周年</div>
+  <div class="nav-tab opcg-tab" data-target="sec-opcg-top">🏆 高价SEC</div>
+  <div class="nav-tab opcg-tab" data-target="sec-opcg-film">🎬 电影</div>
+  <div class="nav-tab opcg-tab" data-target="sec-opcg-excl">🌐 独占</div>
+</div>
+
+<!-- Featured: Top Value Cards -->
+<div class="section active" id="sec-featured">
+  <div class="category-group">
+    <div class="category-header">
+      🔥 市场售价最高的稀有卡 TOP 20
+      <span class="badge badge-hot">HOT</span>
+      <span class="badge badge-ptcg">PTCG</span>
+    </div>
+    <div class="category-desc">
+      按 <strong>TCGPlayer 实时市场价</strong> 排序，价格来自 Pokemon TCG API 抓取的 TCGPlayer/Cardmarket 数据。<br>
+      Special Illustration Rare (SIR) 是当前最高价值卡牌类型。点击卡牌可放大查看高清大图。
+    </div>
+    <div class="card-grid" id="grid-featured"></div>
+  </div>
+</div>
+
+<!-- PTCG 151 -->
+<div class="section" id="sec-151">
+  <div class="category-group">
+    <div class="category-header">
+      🎴 Pokemon 151 / Prismatic Evolutions (sv3pt5)
+      <span class="badge badge-ptcg">PTCG</span>
+    </div>
+    <div class="category-desc">
+      <strong>发售:</strong> 2024.1 (EN) / 2023 (JP) | 初代151只完整收录<br>
+      <strong>高价卡:</strong> Charizard ex SIR $416 · Blastoise ex SIR $160 · Venusaur ex SIR $127 · Zapdos ex SIR $110
+    </div>
+    <div class="card-grid" id="grid-151"></div>
+  </div>
+</div>
+
+<!-- Prismatic Evolutions -->
+<div class="section" id="sec-sv8pt5">
+  <div class="category-group">
+    <div class="category-header">
+      ✨ Prismatic Evolutions (sv8pt5)
+      <span class="badge badge-ptcg">PTCG</span>
+      <span class="badge badge-hot">最热门</span>
+    </div>
+    <div class="category-desc">
+      <strong>发售:</strong> 2025.1 | Eevee全进化形态 SIR 系列，当前最热门扩充包<br>
+      <strong>高价卡:</strong> Umbreon ex SIR <strong style="color:#f1c40f">$1,480</strong> · Sylveon ex SIR $388 · Espeon ex SIR $279 · Leafeon ex SIR $272
+    </div>
+    <div class="card-grid" id="grid-sv8pt5"></div>
+  </div>
+</div>
+
+<!-- Surging Sparks -->
+<div class="section" id="sec-sv8">
+  <div class="category-group">
+    <div class="category-header">
+      ⚡ Surging Sparks (sv8)
+      <span class="badge badge-ptcg">PTCG</span>
+    </div>
+    <div class="category-desc">
+      <strong>发售:</strong> 2024.11 | SV时代第8弹<br>
+      <strong>高价卡:</strong> Pikachu ex SIR $304 · Latias ex SIR $170 · Milotic ex SIR $103
+    </div>
+    <div class="card-grid" id="grid-sv8"></div>
+  </div>
+</div>
+
+<!-- SV Base -->
+<div class="section" id="sec-sv1">
+  <div class="category-group">
+    <div class="category-header">
+      🟡 Scarlet & Violet Base (sv1)
+      <span class="badge badge-ptcg">PTCG</span>
+    </div>
+    <div class="category-desc">
+      <strong>发售:</strong> 2023.3 | SV时代开篇<br>
+      <strong>高价卡:</strong> Gardevoir ex SIR $83 · Miraidon ex SIR · Koraidon ex SIR
+    </div>
+    <div class="card-grid" id="grid-sv1"></div>
+  </div>
+</div>
+
+<!-- Paldea Evolved -->
+<div class="section" id="sec-sv2">
+  <div class="category-group">
+    <div class="category-header">
+      🟢 Paldea Evolved (sv2)
+      <span class="badge badge-ptcg">PTCG</span>
+    </div>
+    <div class="category-desc">
+      <strong>发售:</strong> 2023.6 | 帕底亚进化<br>
+      <strong>高价卡:</strong> Magikarp IR $343 (热门!) · Raichu IR $94
+    </div>
+    <div class="card-grid" id="grid-sv2"></div>
+  </div>
+</div>
+
+<!-- Obsidian Flames -->
+<div class="section" id="sec-sv3">
+  <div class="category-group">
+    <div class="category-header">
+      🔴 Obsidian Flames (sv3)
+      <span class="badge badge-ptcg">PTCG</span>
+    </div>
+    <div class="category-desc">
+      <strong>发售:</strong> 2023.8 | 黑曜烈焰<br>
+      <strong>高价卡:</strong> Charizard ex SIR $120
+    </div>
+    <div class="card-grid" id="grid-sv3"></div>
+  </div>
+</div>
+
+<!-- PTCG CHS Exclusive -->
+<div class="section" id="sec-ptcg-chs">
+  <div class="category-group">
+    <div class="category-header">
+      🇨🇳 PTCG 简体中文独占卡
+      <span class="badge badge-ptcg">PTCG</span>
+      <span class="badge badge-exclusive">简中独占</span>
+    </div>
+    <div class="category-desc">
+      <strong>简中Promo最高价:</strong> 梦幻ex SV-P-003 <strong style="color:#ff4757">¥70,000</strong><br>
+      <strong>151C 皮卡丘AR:</strong> 4张简中独占皮卡丘 ¥2,400~¥6,888<br>
+      <strong>CSV系列独占SAR:</strong> 一家鼠ex ¥1,110 · 风速狗ex ¥975 · 丹瑜 ¥700 · 铁臂膀ex ¥95<br>
+      <strong>CBB盒独占:</strong> 船长皮卡丘 ¥1,079 · 小火马 ¥625 · 月亮伊布 ¥520 · 耿鬼 ¥450 · 卡拉卡拉 ¥430<br>
+      <strong>GO版权替换:</strong> 妙蛙花/水箭龟 V&VMAX · 光辉系列(伊布/水箭龟/妙蛙花)
+      <br><em style="color:var(--text-dim);font-size:0.85em">价格来源：集换社 2026年4月数据</em>
+    </div>
+    <div class="card-grid" id="grid-ptcg-chs"></div>
+  </div>
+</div>
+
+<!-- PTCG 25th Celebrations -->
+<div class="section" id="sec-cel25">
+  <div class="category-group">
+    <div class="category-header">
+      🎂 宝可梦25周年 Celebrations (cel25)
+      <span class="badge badge-ptcg">PTCG</span>
+      <span class="badge badge-anniversary">25周年</span>
+    </div>
+    <div class="category-desc">
+      <strong>发售:</strong> 2021.10 | 宝可梦25周年纪念特别系列<br>
+      <strong>Classic Collection:</strong> 复刻历代经典卡面 — Charizard $196 · Umbreon★ $85 · Shining Magikarp $39<br>
+      <strong>特别卡:</strong> Flying Pikachu VMAX · Surfing Pikachu VMAX · Mew $65 · Professor's Research 25th
+    </div>
+    <div class="card-grid" id="grid-cel25"></div>
+  </div>
+</div>
+
+<!-- McDonald's Collab -->
+<div class="section" id="sec-mcd">
+  <div class="category-group">
+    <div class="category-header">
+      🍔 麦当劳 × 宝可梦 联名全系列
+      <span class="badge badge-ptcg">PTCG</span>
+      <span class="badge badge-collab">联名</span>
+    </div>
+    <div class="category-desc">
+      所有卡面均印有 <strong>McDonald's 金拱门标志</strong>，通过购买 Happy Meal 开心乐园餐获得<br>
+      <strong>2021 (25周年):</strong> 皮卡丘#25 $21 · 妙蛙种子/小火龙/杰尼龟 · 全25张御三家<br>
+      <strong>2019:</strong> 皮卡丘 $21 · 伊布 $5-15 | <strong>2022:</strong> 皮卡丘 $4 · 比克提尼<br>
+      <strong>2014-2018:</strong> 每年一张皮卡丘闪卡 $5-15
+    </div>
+    <div class="card-grid" id="grid-mcd-all"></div>
+  </div>
+</div>
+
+<!-- OPCG Anniversary -->
+<div class="section" id="sec-opcg-anniv">
+  <div class="category-group">
+    <div class="category-header">
+      🎉 OPCG 周年卡册 / 25周年 / JUMP联名
+      <span class="badge badge-opcg">OPCG</span>
+      <span class="badge badge-anniversary">周年</span>
+    </div>
+    <div class="category-desc">
+      <strong>PRB-01 一周年 THE BEST (2024.7):</strong> 跨系列精选集+新平行画，Nami SEC $1,800 · Shanks SEC $1,500 · PRB01-001 Sanji $155<br>
+      <strong>PRB-02 二周年 THE BEST Vol.2 (2025.7):</strong> 路飞双DON红章 ¥500-2,000 · 全套18张+异画<br>
+      <strong>PRB-03 三周年:</strong> Bonney隐藏款 <strong style="color:#ff4757">¥5,000-9,000+</strong> · 苏绣主题<br>
+      <strong>25周年P卡/JUMP联名:</strong> P-001~P-010 草帽全员 · P-028 Ace Event特典 · ST构筑包关键卡
+    </div>
+    <div class="card-grid" id="grid-opcg-anniv"></div>
+  </div>
+</div>
+
+<!-- OPCG Top SEC / Red Bull -->
+<div class="section" id="sec-opcg-top">
+  <div class="category-group">
+    <div class="category-header">
+      🏆 OPCG 高价 SEC + 红牛合作
+      <span class="badge badge-opcg">OPCG</span>
+      <span class="badge badge-hot">HOT</span>
+    </div>
+    <div class="category-desc">
+      <strong>TOP SEC:</strong> 路飞五档 $9,999 · 艾斯 SEC $3,069 · 索隆 SEC $1,875 · 乔巴 SEC $3,450<br>
+      <strong>红牛 Red Bull 合作:</strong> PRB02-005 路飞双DON红章 ¥500-2,000（红牛独占促销）<br>
+      <strong>PRB01 高价:</strong> 香克斯 SEC $1,500 · 狙击王 SEC $1,500 · 罗 SEC $1,200
+    </div>
+    <div class="card-grid" id="grid-opcg-top"></div>
+  </div>
+</div>
+
+<!-- OPCG Film -->
+<div class="section" id="sec-opcg-film">
+  <div class="category-group">
+    <div class="category-header">
+      🎬 OPCG 电影联动 (FILM RED / RED HAIR)
+      <span class="badge badge-opcg">OPCG</span>
+      <span class="badge badge-collab">电影</span>
+    </div>
+    <div class="category-desc">
+      <strong>FILM RED OP-04:</strong> Uta Leader + Shanks SEC ¥400-1,500<br>
+      <strong>FILM RED HAIR OP-05:</strong> Young Shanks Leader ¥400-1,500
+    </div>
+    <div class="card-grid" id="grid-opcg-film"></div>
+  </div>
+</div>
+
+<!-- OPCG Exclusive -->
+<div class="section" id="sec-opcg-excl">
+  <div class="category-group">
+    <div class="category-header">
+      🌐 OPCG 区域/语言独占
+      <span class="badge badge-opcg">OPCG</span>
+      <span class="badge badge-exclusive">独占</span>
+    </div>
+    <div class="category-desc">
+      <strong>简中独占:</strong> Nami 旗袍版 ¥900-2,500 | 苏绣主题 ¥150-600<br>
+      <strong>日文独占:</strong> Nami 25周年画册 ¥800-2,000 | <strong>区域差异:</strong> 二周年领袖卡各区不同
+    </div>
+    <div class="card-grid" id="grid-opcg-excl"></div>
+  </div>
+</div>
+
+<div class="footer">
+  <p>PTCG × OPCG 大师图鉴 v3 | 图片: <a href="https://api.pokemontcg.io" target="_blank">Pokemon TCG API</a> · <a href="https://www.pricecharting.com" target="_blank">PriceCharting</a> | 价格: <a href="https://www.tcgplayer.com" target="_blank">TCGPlayer</a> / <a href="https://www.cardmarket.com" target="_blank">Cardmarket</a></p>
+  <p>价格为 TCGPlayer/Cardmarket 市场均价，仅供参考 | 2026.04.10 更新</p>
+</div>
+
+<script>
+// ===== DATA =====
+var DATA_FEATURED = [{num:"161/sv8pt5",name:"Umbreon ex",rarity:"Special Illustration Rare",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$1480.42",img:"https://images.pokemontcg.io/sv8pt5/161_hires.png"},{num:"199/sv3pt5",name:"Charizard ex",rarity:"Special Illustration Rare",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$416.71",img:"https://images.pokemontcg.io/sv3pt5/199_hires.png"},{num:"156/sv8pt5",name:"Sylveon ex",rarity:"Special Illustration Rare",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$388.12",img:"https://images.pokemontcg.io/sv8pt5/156_hires.png"},{num:"203/sv2",name:"Magikarp",rarity:"Illustration Rare",lang:"EN",src:"Paldea Evolved",type:"sv2",price:"$343.80",img:"https://images.pokemontcg.io/sv2/203_hires.png"},{num:"238/sv8",name:"Pikachu ex",rarity:"Special Illustration Rare",lang:"EN",src:"Surging Sparks",type:"sv8",price:"$304.47",img:"https://images.pokemontcg.io/sv8/238_hires.png"},{num:"155/sv8pt5",name:"Espeon ex",rarity:"Special Illustration Rare",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$279.10",img:"https://images.pokemontcg.io/sv8pt5/155_hires.png"},{num:"144/sv8pt5",name:"Leafeon ex",rarity:"Special Illustration Rare",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$272.93",img:"https://images.pokemontcg.io/sv8pt5/144_hires.png"},{num:"149/sv8pt5",name:"Vaporeon ex",rarity:"Special Illustration Rare",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$219.92",img:"https://images.pokemontcg.io/sv8pt5/149_hires.png"},{num:"150/sv8pt5",name:"Glaceon ex",rarity:"Special Illustration Rare",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$215.09",img:"https://images.pokemontcg.io/sv8pt5/150_hires.png"},{num:"167/sv8pt5",name:"Eevee ex",rarity:"Special Illustration Rare",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$193.36",img:"https://images.pokemontcg.io/sv8pt5/167_hires.png"},{num:"146/sv8pt5",name:"Flareon ex",rarity:"Special Illustration Rare",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$176.86",img:"https://images.pokemontcg.io/sv8pt5/146_hires.png"},{num:"239/sv8",name:"Latias ex",rarity:"Special Illustration Rare",lang:"EN",src:"Surging Sparks",type:"sv8",price:"$170.67",img:"https://images.pokemontcg.io/sv8/239_hires.png"},{num:"153/sv8pt5",name:"Jolteon ex",rarity:"Special Illustration Rare",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$162.99",img:"https://images.pokemontcg.io/sv8pt5/153_hires.png"},{num:"200/sv3pt5",name:"Blastoise ex",rarity:"Special Illustration Rare",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$160.55",img:"https://images.pokemontcg.io/sv3pt5/200_hires.png"},{num:"162/sv8pt5",name:"Roaring Moon ex",rarity:"Special Illustration Rare",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$158.41",img:"https://images.pokemontcg.io/sv8pt5/162_hires.png"},{num:"198/sv3pt5",name:"Venusaur ex",rarity:"Special Illustration Rare",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$127.96",img:"https://images.pokemontcg.io/sv3pt5/198_hires.png"},{num:"223/sv3",name:"Charizard ex",rarity:"Special Illustration Rare",lang:"EN",src:"Obsidian Flames",type:"sv3",price:"$120.68",img:"https://images.pokemontcg.io/sv3/223_hires.png"},{num:"165/sv8pt5",name:"Dragapult ex",rarity:"Special Illustration Rare",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$112.30",img:"https://images.pokemontcg.io/sv8pt5/165_hires.png"},{num:"202/sv3pt5",name:"Zapdos ex",rarity:"Special Illustration Rare",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$110.77",img:"https://images.pokemontcg.io/sv3pt5/202_hires.png"},{num:"168/sv3pt5",name:"Charmander",rarity:"Illustration Rare",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$106.92",img:"https://images.pokemontcg.io/sv3pt5/168_hires.png"}];
+var DATA_151 = [{num:"199/sv3pt5",name:"Charizard ex",rarity:"Special Illustration Rare",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$416.71",img:"https://images.pokemontcg.io/sv3pt5/199_hires.png"},{num:"200/sv3pt5",name:"Blastoise ex",rarity:"Special Illustration Rare",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$160.55",img:"https://images.pokemontcg.io/sv3pt5/200_hires.png"},{num:"198/sv3pt5",name:"Venusaur ex",rarity:"Special Illustration Rare",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$127.96",img:"https://images.pokemontcg.io/sv3pt5/198_hires.png"},{num:"202/sv3pt5",name:"Zapdos ex",rarity:"Special Illustration Rare",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$110.77",img:"https://images.pokemontcg.io/sv3pt5/202_hires.png"},{num:"168/sv3pt5",name:"Charmander",rarity:"Illustration Rare",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$106.92",img:"https://images.pokemontcg.io/sv3pt5/168_hires.png"},{num:"170/sv3pt5",name:"Squirtle",rarity:"Illustration Rare",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$102.46",img:"https://images.pokemontcg.io/sv3pt5/170_hires.png"},{num:"201/sv3pt5",name:"Alakazam ex",rarity:"Special Illustration Rare",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$83.13",img:"https://images.pokemontcg.io/sv3pt5/201_hires.png"},{num:"166/sv3pt5",name:"Bulbasaur",rarity:"Illustration Rare",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$82.75",img:"https://images.pokemontcg.io/sv3pt5/166_hires.png"},{num:"173/sv3pt5",name:"Pikachu",rarity:"Illustration Rare",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$81.02",img:"https://images.pokemontcg.io/sv3pt5/173_hires.png"},{num:"169/sv3pt5",name:"Charmeleon",rarity:"Illustration Rare",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$79.66",img:"https://images.pokemontcg.io/sv3pt5/169_hires.png"},{num:"171/sv3pt5",name:"Wartortle",rarity:"Illustration Rare",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$65.13",img:"https://images.pokemontcg.io/sv3pt5/171_hires.png"},{num:"175/sv3pt5",name:"Psyduck",rarity:"Illustration Rare",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$56.57",img:"https://images.pokemontcg.io/sv3pt5/175_hires.png"},{num:"181/sv3pt5",name:"Dragonair",rarity:"Illustration Rare",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$52.96",img:"https://images.pokemontcg.io/sv3pt5/181_hires.png"},{num:"167/sv3pt5",name:"Ivysaur",rarity:"Illustration Rare",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$52.49",img:"https://images.pokemontcg.io/sv3pt5/167_hires.png"},{num:"183/sv3pt5",name:"Charizard ex",rarity:"Ultra Rare",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$48.49",img:"https://images.pokemontcg.io/sv3pt5/183_hires.png"},{num:"193/sv3pt5",name:"Mew ex",rarity:"Ultra Rare",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$45.56",img:"https://images.pokemontcg.io/sv3pt5/193_hires.png"},{num:"176/sv3pt5",name:"Poliwhirl",rarity:"Illustration Rare",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$41.25",img:"https://images.pokemontcg.io/sv3pt5/176_hires.png"},{num:"2/sv3pt5",name:"Ivysaur",rarity:"Uncommon",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$0.39",img:"https://images.pokemontcg.io/sv3pt5/2_hires.png"},{num:"1/sv3pt5",name:"Bulbasaur",rarity:"Common",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$0.29",img:"https://images.pokemontcg.io/sv3pt5/1_hires.png"},{num:"7/sv3pt5",name:"Squirtle",rarity:"Common",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$0.33",img:"https://images.pokemontcg.io/sv3pt5/7_hires.png"},{num:"19/sv3pt5",name:"Rattata",rarity:"Common",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$0.18",img:"https://images.pokemontcg.io/sv3pt5/19_hires.png"},{num:"8/sv3pt5",name:"Wartortle",rarity:"Uncommon",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$0.36",img:"https://images.pokemontcg.io/sv3pt5/8_hires.png"},{num:"23/sv3pt5",name:"Ekans",rarity:"Common",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$0.25",img:"https://images.pokemontcg.io/sv3pt5/23_hires.png"},{num:"12/sv3pt5",name:"Butterfree",rarity:"Uncommon",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$0.28",img:"https://images.pokemontcg.io/sv3pt5/12_hires.png"},{num:"25/sv3pt5",name:"Pikachu",rarity:"Common",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$0.43",img:"https://images.pokemontcg.io/sv3pt5/25_hires.png"},{num:"16/sv3pt5",name:"Pidgey",rarity:"Common",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$0.34",img:"https://images.pokemontcg.io/sv3pt5/16_hires.png"},{num:"29/sv3pt5",name:"Nidoran ♀",rarity:"Common",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$1.86",img:"https://images.pokemontcg.io/sv3pt5/29_hires.png"},{num:"21/sv3pt5",name:"Spearow",rarity:"Common",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$1.06",img:"https://images.pokemontcg.io/sv3pt5/21_hires.png"},{num:"33/sv3pt5",name:"Nidorino",rarity:"Uncommon",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$0.19",img:"https://images.pokemontcg.io/sv3pt5/33_hires.png"},{num:"30/sv3pt5",name:"Nidorina",rarity:"Uncommon",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$0.28",img:"https://images.pokemontcg.io/sv3pt5/30_hires.png"},{num:"34/sv3pt5",name:"Nidoking",rarity:"Rare",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$0.30",img:"https://images.pokemontcg.io/sv3pt5/34_hires.png"},{num:"32/sv3pt5",name:"Nidoran ♂",rarity:"Common",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$2.61",img:"https://images.pokemontcg.io/sv3pt5/32_hires.png"},{num:"35/sv3pt5",name:"Clefairy",rarity:"Common",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$0.26",img:"https://images.pokemontcg.io/sv3pt5/35_hires.png"},{num:"36/sv3pt5",name:"Clefable",rarity:"Uncommon",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$0.25",img:"https://images.pokemontcg.io/sv3pt5/36_hires.png"},{num:"44/sv3pt5",name:"Gloom",rarity:"Uncommon",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$0.27",img:"https://images.pokemontcg.io/sv3pt5/44_hires.png"},{num:"45/sv3pt5",name:"Vileplume",rarity:"Rare",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$0.27",img:"https://images.pokemontcg.io/sv3pt5/45_hires.png"},{num:"46/sv3pt5",name:"Paras",rarity:"Common",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$0.18",img:"https://images.pokemontcg.io/sv3pt5/46_hires.png"},{num:"51/sv3pt5",name:"Dugtrio",rarity:"Uncommon",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$0.24",img:"https://images.pokemontcg.io/sv3pt5/51_hires.png"},{num:"47/sv3pt5",name:"Parasect",rarity:"Uncommon",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$0.26",img:"https://images.pokemontcg.io/sv3pt5/47_hires.png"},{num:"50/sv3pt5",name:"Diglett",rarity:"Common",lang:"EN",src:"151 Prismatic Evolutions",type:"151",price:"$0.19",img:"https://images.pokemontcg.io/sv3pt5/50_hires.png"}];
+var DATA_SV8PT5 = [{num:"161/sv8pt5",name:"Umbreon ex",rarity:"Special Illustration Rare",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$1480.42",img:"https://images.pokemontcg.io/sv8pt5/161_hires.png"},{num:"156/sv8pt5",name:"Sylveon ex",rarity:"Special Illustration Rare",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$388.12",img:"https://images.pokemontcg.io/sv8pt5/156_hires.png"},{num:"155/sv8pt5",name:"Espeon ex",rarity:"Special Illustration Rare",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$279.10",img:"https://images.pokemontcg.io/sv8pt5/155_hires.png"},{num:"144/sv8pt5",name:"Leafeon ex",rarity:"Special Illustration Rare",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$272.93",img:"https://images.pokemontcg.io/sv8pt5/144_hires.png"},{num:"149/sv8pt5",name:"Vaporeon ex",rarity:"Special Illustration Rare",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$219.92",img:"https://images.pokemontcg.io/sv8pt5/149_hires.png"},{num:"150/sv8pt5",name:"Glaceon ex",rarity:"Special Illustration Rare",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$215.09",img:"https://images.pokemontcg.io/sv8pt5/150_hires.png"},{num:"167/sv8pt5",name:"Eevee ex",rarity:"Special Illustration Rare",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$193.36",img:"https://images.pokemontcg.io/sv8pt5/167_hires.png"},{num:"146/sv8pt5",name:"Flareon ex",rarity:"Special Illustration Rare",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$176.86",img:"https://images.pokemontcg.io/sv8pt5/146_hires.png"},{num:"153/sv8pt5",name:"Jolteon ex",rarity:"Special Illustration Rare",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$162.99",img:"https://images.pokemontcg.io/sv8pt5/153_hires.png"},{num:"162/sv8pt5",name:"Roaring Moon ex",rarity:"Special Illustration Rare",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$158.41",img:"https://images.pokemontcg.io/sv8pt5/162_hires.png"},{num:"165/sv8pt5",name:"Dragapult ex",rarity:"Special Illustration Rare",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$112.30",img:"https://images.pokemontcg.io/sv8pt5/165_hires.png"},{num:"147/sv8pt5",name:"Ceruledge ex",rarity:"Special Illustration Rare",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$93.67",img:"https://images.pokemontcg.io/sv8pt5/147_hires.png"},{num:"166/sv8pt5",name:"Raging Bolt ex",rarity:"Special Illustration Rare",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$64.22",img:"https://images.pokemontcg.io/sv8pt5/166_hires.png"},{num:"179/sv8pt5",name:"Pikachu ex",rarity:"Hyper Rare",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$62.41",img:"https://images.pokemontcg.io/sv8pt5/179_hires.png"},{num:"168/sv8pt5",name:"Bloodmoon Ursaluna ex",rarity:"Special Illustration Rare",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$62.00",img:"https://images.pokemontcg.io/sv8pt5/168_hires.png"},{num:"157/sv8pt5",name:"Iron Valiant ex",rarity:"Special Illustration Rare",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$44.93",img:"https://images.pokemontcg.io/sv8pt5/157_hires.png"},{num:"151/sv8pt5",name:"Palafin ex",rarity:"Special Illustration Rare",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$43.00",img:"https://images.pokemontcg.io/sv8pt5/151_hires.png"},{num:"164/sv8pt5",name:"Gholdengo ex",rarity:"Special Illustration Rare",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$42.10",img:"https://images.pokemontcg.io/sv8pt5/164_hires.png"},{num:"154/sv8pt5",name:"Iron Hands ex",rarity:"Special Illustration Rare",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$35.92",img:"https://images.pokemontcg.io/sv8pt5/154_hires.png"},{num:"169/sv8pt5",name:"Terapagos ex",rarity:"Special Illustration Rare",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$34.96",img:"https://images.pokemontcg.io/sv8pt5/169_hires.png"},{num:"3/sv8pt5",name:"Pinsir",rarity:"Common",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$0.08",img:"https://images.pokemontcg.io/sv8pt5/3_hires.png"},{num:"2/sv8pt5",name:"Exeggutor",rarity:"Uncommon",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$0.11",img:"https://images.pokemontcg.io/sv8pt5/2_hires.png"},{num:"1/sv8pt5",name:"Exeggcute",rarity:"Common",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$0.06",img:"https://images.pokemontcg.io/sv8pt5/1_hires.png"},{num:"8/sv8pt5",name:"Whimsicott",rarity:"Rare",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$0.07",img:"https://images.pokemontcg.io/sv8pt5/8_hires.png"},{num:"9/sv8pt5",name:"Applin",rarity:"Common",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$0.22",img:"https://images.pokemontcg.io/sv8pt5/9_hires.png"},{num:"4/sv8pt5",name:"Budew",rarity:"Common",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$0.22",img:"https://images.pokemontcg.io/sv8pt5/4_hires.png"},{num:"5/sv8pt5",name:"Leafeon",rarity:"Rare",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$0.29",img:"https://images.pokemontcg.io/sv8pt5/5_hires.png"},{num:"7/sv8pt5",name:"Cottonee",rarity:"Common",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$0.08",img:"https://images.pokemontcg.io/sv8pt5/7_hires.png"},{num:"13/sv8pt5",name:"Flareon",rarity:"Rare",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$0.26",img:"https://images.pokemontcg.io/sv8pt5/13_hires.png"},{num:"10/sv8pt5",name:"Dipplin",rarity:"Uncommon",lang:"EN",src:"Prismatic Evolutions",type:"sv8pt5",price:"$0.20",img:"https://images.pokemontcg.io/sv8pt5/10_hires.png"}];
+var DATA_SV8 = [{num:"238/sv8",name:"Pikachu ex",rarity:"Special Illustration Rare",lang:"EN",src:"Surging Sparks",type:"sv8",price:"$304.47",img:"https://images.pokemontcg.io/sv8/238_hires.png"},{num:"239/sv8",name:"Latias ex",rarity:"Special Illustration Rare",lang:"EN",src:"Surging Sparks",type:"sv8",price:"$170.67",img:"https://images.pokemontcg.io/sv8/239_hires.png"},{num:"237/sv8",name:"Milotic ex",rarity:"Special Illustration Rare",lang:"EN",src:"Surging Sparks",type:"sv8",price:"$103.11",img:"https://images.pokemontcg.io/sv8/237_hires.png"},{num:"247/sv8",name:"Pikachu ex",rarity:"Hyper Rare",lang:"EN",src:"Surging Sparks",type:"sv8",price:"$72.69",img:"https://images.pokemontcg.io/sv8/247_hires.png"},{num:"240/sv8",name:"Hydreigon ex",rarity:"Special Illustration Rare",lang:"EN",src:"Surging Sparks",type:"sv8",price:"$39.44",img:"https://images.pokemontcg.io/sv8/240_hires.png"},{num:"1/sv8",name:"Exeggcute",rarity:"Common",lang:"EN",src:"Surging Sparks",type:"sv8",price:"$0.16",img:"https://images.pokemontcg.io/sv8/1_hires.png"},{num:"2/sv8",name:"Exeggcute",rarity:"Common",lang:"EN",src:"Surging Sparks",type:"sv8",price:"$0.14",img:"https://images.pokemontcg.io/sv8/2_hires.png"},{num:"3/sv8",name:"Exeggutor",rarity:"Uncommon",lang:"EN",src:"Surging Sparks",type:"sv8",price:"$0.17",img:"https://images.pokemontcg.io/sv8/3_hires.png"},{num:"5/sv8",name:"Scatterbug",rarity:"Common",lang:"EN",src:"Surging Sparks",type:"sv8",price:"$0.14",img:"https://images.pokemontcg.io/sv8/5_hires.png"},{num:"6/sv8",name:"Spewpa",rarity:"Common",lang:"EN",src:"Surging Sparks",type:"sv8",price:"$0.13",img:"https://images.pokemontcg.io/sv8/6_hires.png"},{num:"7/sv8",name:"Vivillon",rarity:"Uncommon",lang:"EN",src:"Surging Sparks",type:"sv8",price:"$0.27",img:"https://images.pokemontcg.io/sv8/7_hires.png"},{num:"8/sv8",name:"Morelull",rarity:"Common",lang:"EN",src:"Surging Sparks",type:"sv8",price:"$0.11",img:"https://images.pokemontcg.io/sv8/8_hires.png"},{num:"9/sv8",name:"Shiinotic",rarity:"Uncommon",lang:"EN",src:"Surging Sparks",type:"sv8",price:"$0.16",img:"https://images.pokemontcg.io/sv8/9_hires.png"},{num:"10/sv8",name:"Dhelmise",rarity:"Common",lang:"EN",src:"Surging Sparks",type:"sv8",price:"$0.13",img:"https://images.pokemontcg.io/sv8/10_hires.png"},{num:"11/sv8",name:"Zarude",rarity:"Rare",lang:"EN",src:"Surging Sparks",type:"sv8",price:"$0.16",img:"https://images.pokemontcg.io/sv8/11_hires.png"},{num:"12/sv8",name:"Capsakid",rarity:"Common",lang:"EN",src:"Surging Sparks",type:"sv8",price:"$0.13",img:"https://images.pokemontcg.io/sv8/12_hires.png"},{num:"13/sv8",name:"Rellor",rarity:"Common",lang:"EN",src:"Surging Sparks",type:"sv8",price:"$0.11",img:"https://images.pokemontcg.io/sv8/13_hires.png"},{num:"14/sv8",name:"Rabsca",rarity:"Rare",lang:"EN",src:"Surging Sparks",type:"sv8",price:"$0.08",img:"https://images.pokemontcg.io/sv8/14_hires.png"},{num:"15/sv8",name:"Wo-Chien",rarity:"Uncommon",lang:"EN",src:"Surging Sparks",type:"sv8",price:"$0.18",img:"https://images.pokemontcg.io/sv8/15_hires.png"},{num:"16/sv8",name:"Vulpix",rarity:"Common",lang:"EN",src:"Surging Sparks",type:"sv8",price:"$0.20",img:"https://images.pokemontcg.io/sv8/16_hires.png"},{num:"17/sv8",name:"Ninetales",rarity:"Uncommon",lang:"EN",src:"Surging Sparks",type:"sv8",price:"$0.32",img:"https://images.pokemontcg.io/sv8/17_hires.png"},{num:"18/sv8",name:"Paldean Tauros",rarity:"Uncommon",lang:"EN",src:"Surging Sparks",type:"sv8",price:"$0.14",img:"https://images.pokemontcg.io/sv8/18_hires.png"},{num:"19/sv8",name:"Ho-Oh",rarity:"Uncommon",lang:"EN",src:"Surging Sparks",type:"sv8",price:"$0.27",img:"https://images.pokemontcg.io/sv8/19_hires.png"},{num:"20/sv8",name:"Castform Sunny Form",rarity:"Common",lang:"EN",src:"Surging Sparks",type:"sv8",price:"$0.17",img:"https://images.pokemontcg.io/sv8/20_hires.png"},{num:"21/sv8",name:"Victini",rarity:"Uncommon",lang:"EN",src:"Surging Sparks",type:"sv8",price:"$0.29",img:"https://images.pokemontcg.io/sv8/21_hires.png"},{num:"22/sv8",name:"Pansear",rarity:"Common",lang:"EN",src:"Surging Sparks",type:"sv8",price:"$0.19",img:"https://images.pokemontcg.io/sv8/22_hires.png"},{num:"23/sv8",name:"Simisear",rarity:"Common",lang:"EN",src:"Surging Sparks",type:"sv8",price:"$0.13",img:"https://images.pokemontcg.io/sv8/23_hires.png"},{num:"24/sv8",name:"Larvesta",rarity:"Common",lang:"EN",src:"Surging Sparks",type:"sv8",price:"$0.12",img:"https://images.pokemontcg.io/sv8/24_hires.png"},{num:"25/sv8",name:"Volcarona",rarity:"Common",lang:"EN",src:"Surging Sparks",type:"sv8",price:"$0.12",img:"https://images.pokemontcg.io/sv8/25_hires.png"},{num:"26/sv8",name:"Oricorio",rarity:"Common",lang:"EN",src:"Surging Sparks",type:"sv8",price:"$0.14",img:"https://images.pokemontcg.io/sv8/26_hires.png"}];
+var DATA_SV1 = [{num:"245/sv1",name:"Gardevoir ex",rarity:"Special Illustration Rare",lang:"EN",src:"Scarlet & Violet Base",type:"sv1",price:"$83.62",img:"https://images.pokemontcg.io/sv1/245_hires.png"},{num:"210/sv1",name:"Drowzee",rarity:"Illustration Rare",lang:"EN",src:"Scarlet & Violet Base",type:"sv1",price:"$51.33",img:"https://images.pokemontcg.io/sv1/210_hires.png"},{num:"212/sv1",name:"Kirlia",rarity:"Illustration Rare",lang:"EN",src:"Scarlet & Violet Base",type:"sv1",price:"$45.94",img:"https://images.pokemontcg.io/sv1/212_hires.png"},{num:"211/sv1",name:"Ralts",rarity:"Illustration Rare",lang:"EN",src:"Scarlet & Violet Base",type:"sv1",price:"$40.89",img:"https://images.pokemontcg.io/sv1/211_hires.png"},{num:"215/sv1",name:"Riolu",rarity:"Illustration Rare",lang:"EN",src:"Scarlet & Violet Base",type:"sv1",price:"$36.06",img:"https://images.pokemontcg.io/sv1/215_hires.png"},{num:"204/sv1",name:"Slowpoke",rarity:"Illustration Rare",lang:"EN",src:"Scarlet & Violet Base",type:"sv1",price:"$35.21",img:"https://images.pokemontcg.io/sv1/204_hires.png"},{num:"8/sv1",name:"Scatterbug",rarity:"Common",lang:"EN",src:"Scarlet & Violet Base",type:"sv1",price:"$0.13",img:"https://images.pokemontcg.io/sv1/8_hires.png"},{num:"1/sv1",name:"Pineco",rarity:"Common",lang:"EN",src:"Scarlet & Violet Base",type:"sv1",price:"$0.15",img:"https://images.pokemontcg.io/sv1/1_hires.png"},{num:"6/sv1",name:"Cacturne",rarity:"Uncommon",lang:"EN",src:"Scarlet & Violet Base",type:"sv1",price:"$0.19",img:"https://images.pokemontcg.io/sv1/6_hires.png"},{num:"12/sv1",name:"Gogoat",rarity:"Common",lang:"EN",src:"Scarlet & Violet Base",type:"sv1",price:"$0.13",img:"https://images.pokemontcg.io/sv1/12_hires.png"},{num:"13/sv1",name:"Sprigatito",rarity:"Common",lang:"EN",src:"Scarlet & Violet Base",type:"sv1",price:"$0.21",img:"https://images.pokemontcg.io/sv1/13_hires.png"},{num:"15/sv1",name:"Meowscarada",rarity:"Rare",lang:"EN",src:"Scarlet & Violet Base",type:"sv1",price:"$0.18",img:"https://images.pokemontcg.io/sv1/15_hires.png"},{num:"16/sv1",name:"Tarountula",rarity:"Common",lang:"EN",src:"Scarlet & Violet Base",type:"sv1",price:"$0.20",img:"https://images.pokemontcg.io/sv1/16_hires.png"},{num:"18/sv1",name:"Tarountula",rarity:"Common",lang:"EN",src:"Scarlet & Violet Base",type:"sv1",price:"$0.21",img:"https://images.pokemontcg.io/sv1/18_hires.png"},{num:"20/sv1",name:"Smoliv",rarity:"Common",lang:"EN",src:"Scarlet & Violet Base",type:"sv1",price:"$0.20",img:"https://images.pokemontcg.io/sv1/20_hires.png"},{num:"21/sv1",name:"Smoliv",rarity:"Common",lang:"EN",src:"Scarlet & Violet Base",type:"sv1",price:"$0.16",img:"https://images.pokemontcg.io/sv1/21_hires.png"},{num:"23/sv1",name:"Arboliva",rarity:"Rare",lang:"EN",src:"Scarlet & Violet Base",type:"sv1",price:"$0.12",img:"https://images.pokemontcg.io/sv1/23_hires.png"},{num:"24/sv1",name:"Toedscool",rarity:"Common",lang:"EN",src:"Scarlet & Violet Base",type:"sv1",price:"$0.16",img:"https://images.pokemontcg.io/sv1/24_hires.png"},{num:"2/sv1",name:"Heracross",rarity:"Uncommon",lang:"EN",src:"Scarlet & Violet Base",type:"sv1",price:"$0.19",img:"https://images.pokemontcg.io/sv1/2_hires.png"},{num:"4/sv1",name:"Breloom",rarity:"Uncommon",lang:"EN",src:"Scarlet & Violet Base",type:"sv1",price:"$0.18",img:"https://images.pokemontcg.io/sv1/4_hires.png"},{num:"7/sv1",name:"Tropius",rarity:"Common",lang:"EN",src:"Scarlet & Violet Base",type:"sv1",price:"$0.11",img:"https://images.pokemontcg.io/sv1/7_hires.png"},{num:"10/sv1",name:"Vivillon",rarity:"Uncommon",lang:"EN",src:"Scarlet & Violet Base",type:"sv1",price:"$0.19",img:"https://images.pokemontcg.io/sv1/10_hires.png"},{num:"11/sv1",name:"Skiddo",rarity:"Common",lang:"EN",src:"Scarlet & Violet Base",type:"sv1",price:"$0.11",img:"https://images.pokemontcg.io/sv1/11_hires.png"},{num:"14/sv1",name:"Floragato",rarity:"Uncommon",lang:"EN",src:"Scarlet & Violet Base",type:"sv1",price:"$0.22",img:"https://images.pokemontcg.io/sv1/14_hires.png"},{num:"26/sv1",name:"Toedscruel",rarity:"Uncommon",lang:"EN",src:"Scarlet & Violet Base",type:"sv1",price:"$0.19",img:"https://images.pokemontcg.io/sv1/26_hires.png"}];
+var DATA_SV2 = [{num:"203/sv2",name:"Magikarp",rarity:"Illustration Rare",lang:"EN",src:"Paldea Evolved",type:"sv2",price:"$343.80",img:"https://images.pokemontcg.io/sv2/203_hires.png"},{num:"211/sv2",name:"Raichu",rarity:"Illustration Rare",lang:"EN",src:"Paldea Evolved",type:"sv2",price:"$94.22",img:"https://images.pokemontcg.io/sv2/211_hires.png"},{num:"226/sv2",name:"Maushold",rarity:"Illustration Rare",lang:"EN",src:"Paldea Evolved",type:"sv2",price:"$74.26",img:"https://images.pokemontcg.io/sv2/226_hires.png"},{num:"222/sv2",name:"Tyranitar",rarity:"Illustration Rare",lang:"EN",src:"Paldea Evolved",type:"sv2",price:"$70.87",img:"https://images.pokemontcg.io/sv2/222_hires.png"},{num:"201/sv2",name:"Fuecoco",rarity:"Illustration Rare",lang:"EN",src:"Paldea Evolved",type:"sv2",price:"$48.26",img:"https://images.pokemontcg.io/sv2/201_hires.png"},{num:"196/sv2",name:"Sprigatito",rarity:"Illustration Rare",lang:"EN",src:"Paldea Evolved",type:"sv2",price:"$44.49",img:"https://images.pokemontcg.io/sv2/196_hires.png"},{num:"204/sv2",name:"Marill",rarity:"Illustration Rare",lang:"EN",src:"Paldea Evolved",type:"sv2",price:"$40.78",img:"https://images.pokemontcg.io/sv2/204_hires.png"},{num:"212/sv2",name:"Mismagius",rarity:"Illustration Rare",lang:"EN",src:"Paldea Evolved",type:"sv2",price:"$34.36",img:"https://images.pokemontcg.io/sv2/212_hires.png"},{num:"1/sv2",name:"Hoppip",rarity:"Common",lang:"EN",src:"Paldea Evolved",type:"sv2",price:"$0.12",img:"https://images.pokemontcg.io/sv2/1_hires.png"},{num:"2/sv2",name:"Skiploom",rarity:"Uncommon",lang:"EN",src:"Paldea Evolved",type:"sv2",price:"$0.18",img:"https://images.pokemontcg.io/sv2/2_hires.png"},{num:"4/sv2",name:"Pineco",rarity:"Common",lang:"EN",src:"Paldea Evolved",type:"sv2",price:"$0.10",img:"https://images.pokemontcg.io/sv2/4_hires.png"},{num:"3/sv2",name:"Jumpluff",rarity:"Rare",lang:"EN",src:"Paldea Evolved",type:"sv2",price:"$0.15",img:"https://images.pokemontcg.io/sv2/3_hires.png"},{num:"7/sv2",name:"Tropius",rarity:"Common",lang:"EN",src:"Paldea Evolved",type:"sv2",price:"$0.10",img:"https://images.pokemontcg.io/sv2/7_hires.png"},{num:"6/sv2",name:"Heracross",rarity:"Uncommon",lang:"EN",src:"Paldea Evolved",type:"sv2",price:"$0.15",img:"https://images.pokemontcg.io/sv2/6_hires.png"},{num:"12/sv2",name:"Sprigatito",rarity:"Common",lang:"EN",src:"Paldea Evolved",type:"sv2",price:"$0.18",img:"https://images.pokemontcg.io/sv2/12_hires.png"},{num:"13/sv2",name:"Sprigatito",rarity:"Common",lang:"EN",src:"Paldea Evolved",type:"sv2",price:"$0.24",img:"https://images.pokemontcg.io/sv2/13_hires.png"},{num:"14/sv2",name:"Floragato",rarity:"Uncommon",lang:"EN",src:"Paldea Evolved",type:"sv2",price:"$0.18",img:"https://images.pokemontcg.io/sv2/14_hires.png"},{num:"18/sv2",name:"Spidops",rarity:"Uncommon",lang:"EN",src:"Paldea Evolved",type:"sv2",price:"$0.15",img:"https://images.pokemontcg.io/sv2/18_hires.png"},{num:"16/sv2",name:"Tarountula",rarity:"Common",lang:"EN",src:"Paldea Evolved",type:"sv2",price:"$0.19",img:"https://images.pokemontcg.io/sv2/16_hires.png"},{num:"17/sv2",name:"Tarountula",rarity:"Common",lang:"EN",src:"Paldea Evolved",type:"sv2",price:"$0.18",img:"https://images.pokemontcg.io/sv2/17_hires.png"},{num:"8/sv2",name:"Combee",rarity:"Common",lang:"EN",src:"Paldea Evolved",type:"sv2",price:"$0.12",img:"https://images.pokemontcg.io/sv2/8_hires.png"},{num:"9/sv2",name:"Vespiquen",rarity:"Uncommon",lang:"EN",src:"Paldea Evolved",type:"sv2",price:"$0.18",img:"https://images.pokemontcg.io/sv2/9_hires.png"},{num:"10/sv2",name:"Snover",rarity:"Common",lang:"EN",src:"Paldea Evolved",type:"sv2",price:"$0.11",img:"https://images.pokemontcg.io/sv2/10_hires.png"},{num:"11/sv2",name:"Abomasnow",rarity:"Rare",lang:"EN",src:"Paldea Evolved",type:"sv2",price:"$0.07",img:"https://images.pokemontcg.io/sv2/11_hires.png"},{num:"20/sv2",name:"Nymble",rarity:"Common",lang:"EN",src:"Paldea Evolved",type:"sv2",price:"$0.15",img:"https://images.pokemontcg.io/sv2/20_hires.png"}];
+var DATA_SV3 = [{num:"223/sv3",name:"Charizard ex",rarity:"Special Illustration Rare",lang:"EN",src:"Obsidian Flames",type:"sv3",price:"$120.68",img:"https://images.pokemontcg.io/sv3/223_hires.png"},{num:"202/sv3",name:"Cleffa",rarity:"Illustration Rare",lang:"EN",src:"Obsidian Flames",type:"sv3",price:"$41.18",img:"https://images.pokemontcg.io/sv3/202_hires.png"},{num:"228/sv3",name:"Charizard ex",rarity:"Hyper Rare",lang:"EN",src:"Obsidian Flames",type:"sv3",price:"$40.18",img:"https://images.pokemontcg.io/sv3/228_hires.png"},{num:"199/sv3",name:"Ninetales",rarity:"Illustration Rare",lang:"EN",src:"Obsidian Flames",type:"sv3",price:"$40.12",img:"https://images.pokemontcg.io/sv3/199_hires.png"},{num:"6/sv3",name:"Surskit",rarity:"Common",lang:"EN",src:"Obsidian Flames",type:"sv3",price:"$0.15",img:"https://images.pokemontcg.io/sv3/6_hires.png"},{num:"2/sv3",name:"Gloom",rarity:"Common",lang:"EN",src:"Obsidian Flames",type:"sv3",price:"$0.26",img:"https://images.pokemontcg.io/sv3/2_hires.png"},{num:"1/sv3",name:"Oddish",rarity:"Common",lang:"EN",src:"Obsidian Flames",type:"sv3",price:"$0.15",img:"https://images.pokemontcg.io/sv3/1_hires.png"},{num:"11/sv3",name:"Phantump",rarity:"Common",lang:"EN",src:"Obsidian Flames",type:"sv3",price:"$0.17",img:"https://images.pokemontcg.io/sv3/11_hires.png"},{num:"17/sv3",name:"Steenee",rarity:"Common",lang:"EN",src:"Obsidian Flames",type:"sv3",price:"$0.19",img:"https://images.pokemontcg.io/sv3/17_hires.png"},{num:"27/sv3",name:"Charmeleon",rarity:"Uncommon",lang:"EN",src:"Obsidian Flames",type:"sv3",price:"$0.30",img:"https://images.pokemontcg.io/sv3/27_hires.png"},{num:"32/sv3",name:"Camerupt",rarity:"Uncommon",lang:"EN",src:"Obsidian Flames",type:"sv3",price:"$0.21",img:"https://images.pokemontcg.io/sv3/32_hires.png"},{num:"35/sv3",name:"Darmanitan",rarity:"Uncommon",lang:"EN",src:"Obsidian Flames",type:"sv3",price:"$0.22",img:"https://images.pokemontcg.io/sv3/35_hires.png"},{num:"4/sv3",name:"Scyther",rarity:"Common",lang:"EN",src:"Obsidian Flames",type:"sv3",price:"$0.14",img:"https://images.pokemontcg.io/sv3/4_hires.png"},{num:"9/sv3",name:"Foongus",rarity:"Common",lang:"EN",src:"Obsidian Flames",type:"sv3",price:"$0.11",img:"https://images.pokemontcg.io/sv3/9_hires.png"},{num:"24/sv3",name:"Capsakid",rarity:"Common",lang:"EN",src:"Obsidian Flames",type:"sv3",price:"$0.21",img:"https://images.pokemontcg.io/sv3/24_hires.png"},{num:"25/sv3",name:"Scovillain",rarity:"Rare",lang:"EN",src:"Obsidian Flames",type:"sv3",price:"$0.12",img:"https://images.pokemontcg.io/sv3/25_hires.png"},{num:"31/sv3",name:"Numel",rarity:"Common",lang:"EN",src:"Obsidian Flames",type:"sv3",price:"$0.12",img:"https://images.pokemontcg.io/sv3/31_hires.png"},{num:"34/sv3",name:"Darumaka",rarity:"Common",lang:"EN",src:"Obsidian Flames",type:"sv3",price:"$0.10",img:"https://images.pokemontcg.io/sv3/34_hires.png"},{num:"8/sv3",name:"Combee",rarity:"Common",lang:"EN",src:"Obsidian Flames",type:"sv3",price:"$0.18",img:"https://images.pokemontcg.io/sv3/8_hires.png"},{num:"3/sv3",name:"Bellossom",rarity:"Uncommon",lang:"EN",src:"Obsidian Flames",type:"sv3",price:"$0.28",img:"https://images.pokemontcg.io/sv3/3_hires.png"},{num:"5/sv3",name:"Shuckle",rarity:"Common",lang:"EN",src:"Obsidian Flames",type:"sv3",price:"$0.24",img:"https://images.pokemontcg.io/sv3/5_hires.png"},{num:"7/sv3",name:"Masquerain",rarity:"Uncommon",lang:"EN",src:"Obsidian Flames",type:"sv3",price:"$0.21",img:"https://images.pokemontcg.io/sv3/7_hires.png"},{num:"10/sv3",name:"Amoonguss",rarity:"Uncommon",lang:"EN",src:"Obsidian Flames",type:"sv3",price:"$0.17",img:"https://images.pokemontcg.io/sv3/10_hires.png"},{num:"12/sv3",name:"Trevenant",rarity:"Uncommon",lang:"EN",src:"Obsidian Flames",type:"sv3",price:"$0.18",img:"https://images.pokemontcg.io/sv3/12_hires.png"},{num:"16/sv3",name:"Bounsweet",rarity:"Common",lang:"EN",src:"Obsidian Flames",type:"sv3",price:"$0.18",img:"https://images.pokemontcg.io/sv3/16_hires.png"}];
+// === PTCG 简中独占（数据来源：集换社 2026.04）===
+// 注意：简中独占卡面与英文版完全不同，暂无公开CDN可获取真实简中卡图
+var DATA_PTCG_CHS = [
+{num:"SV-P-003",name:"梦幻ex",rarity:"Promo",lang:"CHS",src:"简中独占 Promo",price:"¥70,000",img:"chs-imgs/SV-P-003.jpg",note:"★简中最贵独占★"},
+{num:"151C-172/151",name:"皮卡丘 AR (耿鬼皮)",rarity:"AR",lang:"CHS",src:"简中 收集啦151",price:"¥6,888",img:"chs-imgs/151C-172.jpg",note:"简中151独占画面"},
+{num:"151C-170/151",name:"皮卡丘 AR (飞天皮)",rarity:"AR",lang:"CHS",src:"简中 收集啦151",price:"¥2,725",img:"chs-imgs/151C-170.jpg",note:"简中151独占画面"},
+{num:"151C-173/151",name:"皮卡丘 AR (群体皮)",rarity:"AR",lang:"CHS",src:"简中 收集啦151",price:"¥2,400",img:"chs-imgs/151C-173.jpg"},
+{num:"151C-171/151",name:"皮卡丘 AR (湖边皮)",rarity:"AR",lang:"CHS",src:"简中 收集啦151",price:"¥2,400",img:"chs-imgs/151C-171.jpg",note:"简中151独占画面"},
+{num:"CSV4C-158",name:"一家鼠ex",rarity:"SAR",lang:"CHS",src:"简中SV4 独占SAR",price:"¥1,110",img:"chs-imgs/CSV4C-158.jpg",note:"简中独占SAR"},
+{num:"CBB1C-07",name:"船长皮卡丘",rarity:"Promo",lang:"CHS",src:"简中 BBBox",price:"¥1,079",img:"chs-imgs/CBB1C-07.jpg",note:"Build Box独占"},
+{num:"CSV3C-155",name:"风速狗ex",rarity:"SAR",lang:"CHS",src:"简中SV3 独占SAR",price:"¥975",img:"chs-imgs/CSV3C-155.jpg",note:"简中独占SAR"},
+{num:"CSV8C-255",name:"丹瑜",rarity:"SAR",lang:"CHS",src:"简中SV8 独占SAR",price:"¥700",img:"chs-imgs/CSV8C-255.jpg",note:"简中SV8独占"},
+{num:"CBB4C-01",name:"小火马",rarity:"Promo",lang:"CHS",src:"简中 BBBox4",price:"¥625",img:"chs-imgs/CBB4C-01.jpg"},
+{num:"CS5.1C-02",name:"对战会员通行证",rarity:"UR",lang:"CHS",src:"简中 剑盾",price:"¥550",img:"chs-imgs/CS5.1C-02.png",note:"简中独占"},
+{num:"CBB2C-06",name:"月亮伊布",rarity:"Promo",lang:"CHS",src:"简中 BBBox2",price:"¥520",img:"chs-imgs/CBB2C-06.jpg"},
+{num:"CBB3C-03",name:"耿鬼",rarity:"Promo",lang:"CHS",src:"简中 BBBox3",price:"¥450",img:"chs-imgs/CBB3C-03.jpg"},
+{num:"CBB3C-04",name:"卡拉卡拉",rarity:"Promo",lang:"CHS",src:"简中 BBBox3",price:"¥430",img:"chs-imgs/CBB3C-04.jpg"},
+{num:"CSV7C-245",name:"暗码迷的解读",rarity:"SAR",lang:"CHS",src:"简中SV7 独占",price:"¥163",img:"chs-imgs/CSV7C-245.jpg"},
+{num:"CSV4C-162/129",name:"赛富豪ex",rarity:"UR",lang:"CHS",src:"简中SV4 独占UR",price:"¥150",img:"chs-imgs/CSV4C-162.jpg"},
+{num:"CBB2C-07",name:"叶伊布",rarity:"Promo",lang:"CHS",src:"简中 BBBox2",price:"¥145",img:"chs-imgs/CBB2C-07.jpg"},
+{num:"CSV4C-159",name:"辛俐",rarity:"SAR",lang:"CHS",src:"简中SV4 独占",price:"¥140",img:"chs-imgs/CSV4C-159.jpg"},
+{num:"CS3bC-129",name:"水箭龟V",rarity:"SR",lang:"CHS",src:"简中 GO替换",price:"¥140",img:"chs-imgs/CS3bC-129.png",note:"GO版权替换"},
+{num:"CBB2C-01",name:"伊布",rarity:"Promo",lang:"CHS",src:"简中 BBBox2",price:"¥135",img:"chs-imgs/CBB2C-01.jpg"},
+{num:"CBB2C-09",name:"仙子伊布",rarity:"Promo",lang:"CHS",src:"简中 BBBox2",price:"¥130",img:"chs-imgs/CBB2C-09.jpg"},
+{num:"CS3bC-160",name:"水箭龟VMAX",rarity:"HR",lang:"CHS",src:"简中 GO替换",price:"¥110",img:"chs-imgs/CS3bC-160.png",note:"GO版权替换"},
+{num:"CBB1C-01",name:"新叶喵",rarity:"Promo",lang:"CHS",src:"简中 BBBox1",price:"¥108",img:"chs-imgs/CBB1C-01.jpg"},
+{num:"CBB3C-02",name:"喵喵",rarity:"Promo",lang:"CHS",src:"简中 BBBox3",price:"¥100",img:"chs-imgs/CBB3C-02.jpg"},
+{num:"CSV6C-152",name:"铁臂膀ex",rarity:"SAR",lang:"CHS",src:"简中SV6 独占",price:"¥95",img:"chs-imgs/CSV6C-152.jpg"},
+{num:"CS3aC-130",name:"妙蛙花V",rarity:"SR",lang:"CHS",src:"简中 GO替换",price:"¥90",img:"chs-imgs/CS3aC-130.png",note:"GO版权替换"},
+{num:"CS3aC-161",name:"妙蛙花VMAX",rarity:"HR",lang:"CHS",src:"简中 GO替换",price:"¥85",img:"chs-imgs/CS3aC-161.png",note:"GO版权替换"},
+{num:"CSV6C-163/128",name:"朋友手册",rarity:"UR",lang:"CHS",src:"简中SV6 独占UR",price:"¥79",img:"chs-imgs/CSV6C-163.jpg"},
+{num:"CSV5C-157",name:"青木",rarity:"SAR",lang:"CHS",src:"简中SV5 独占",price:"¥64",img:"chs-imgs/CSV5C-157.png"},
+{num:"CS5aC-092",name:"光辉伊布",rarity:"K",lang:"CHS",src:"简中 剑盾",price:"¥50",img:"chs-imgs/CS5aC-092.png"},
+{num:"CBB3C-15",name:"苍炎刃鬼",rarity:"Promo",lang:"CHS",src:"简中 BBBox3",price:"¥39",img:"chs-imgs/CBB3C-15.jpg"},
+{num:"CBB1C-03",name:"呆火鳄",rarity:"Promo",lang:"CHS",src:"简中 BBBox1",price:"¥35",img:"chs-imgs/CBB1C-03.jpg"},
+{num:"CSV5C-164/129",name:"不服输头带",rarity:"UR",lang:"CHS",src:"简中SV5 独占UR",price:"¥29",img:"chs-imgs/CSV5C-164.png"},
+{num:"CBB1C-05",name:"润水鸭",rarity:"Promo",lang:"CHS",src:"简中 BBBox1",price:"¥25",img:"chs-imgs/CBB1C-05.jpg"},
+{num:"CS5.5C-015/066",name:"光辉水箭龟",rarity:"K",lang:"CHS",src:"简中 剑盾",price:"¥10",img:"chs-imgs/CS55C-015.jpg"},
+{num:"CBB3C-11",name:"水晶灯火灵",rarity:"Promo",lang:"CHS",src:"简中 BBBox3",price:"¥5",img:"chs-imgs/CBB3C-11.jpg"},
+{num:"CS5bC-004",name:"光辉妙蛙花",rarity:"K",lang:"CHS",src:"简中 剑盾",price:"¥1.5",img:"chs-imgs/CS5bC-004.png"},
+{num:"CS5bC-003",name:"卡比兽",rarity:"R",lang:"CHS",src:"简中 剑盾",price:"¥0.5",img:"chs-imgs/CS5bC-003.png",note:"简中独占"},
+{num:"CS5bC-098",name:"卡比兽",rarity:"R",lang:"CHS",src:"简中 剑盾",price:"¥0.5",img:"chs-imgs/CS5bC-098.png",note:"简中独占"}
+];
+
+// === 宝可梦25周年 Celebrations ===
+var DATA_CEL25 = [
+{num:"4/cel25c",name:"喷火龙 Charizard",rarity:"Classic Collection",lang:"EN",src:"25th Celebrations",price:"$196.05",img:"https://images.pokemontcg.io/cel25c/4_A_hires.png",note:"经典复刻 最高价"},
+{num:"17/cel25c",name:"月亮伊布★ Umbreon",rarity:"Classic Collection",lang:"EN",src:"25th Celebrations",price:"$84.95",img:"https://images.pokemontcg.io/cel25c/17_A_hires.png",note:"金星卡复刻"},
+{num:"25/cel25",name:"梦幻 Mew",rarity:"Rare Holo",lang:"EN",src:"25th Celebrations",price:"$65.34",img:"https://images.pokemontcg.io/cel25/25_hires.png"},
+{num:"66/cel25c",name:"闪光鲤鱼王 Shining Magikarp",rarity:"Classic Collection",lang:"EN",src:"25th Celebrations",price:"$39.11",img:"https://images.pokemontcg.io/cel25c/66_A_hires.png",note:"闪光卡复刻"},
+{num:"76/cel25c",name:"M烈空坐EX M Rayquaza",rarity:"Classic Collection",lang:"EN",src:"25th Celebrations",price:"$37.46",img:"https://images.pokemontcg.io/cel25c/76_A_hires.png"},
+{num:"24/cel25c",name:"___的皮卡丘 Birthday Pikachu",rarity:"Classic Collection",lang:"EN",src:"25th Celebrations",price:"$35.27",img:"https://images.pokemontcg.io/cel25c/24_A_hires.png",note:"生日皮卡丘"},
+{num:"114/cel25c",name:"捷克罗姆 Zekrom",rarity:"Classic Collection",lang:"EN",src:"25th Celebrations",price:"$19.22",img:"https://images.pokemontcg.io/cel25c/114_A_hires.png"},
+{num:"88/cel25c",name:"梦幻ex Mew ex",rarity:"Classic Collection",lang:"EN",src:"25th Celebrations",price:"$18.21",img:"https://images.pokemontcg.io/cel25c/88_A_hires.png"},
+{num:"2/cel25c",name:"水箭龟 Blastoise",rarity:"Classic Collection",lang:"EN",src:"25th Celebrations",price:"$16.96",img:"https://images.pokemontcg.io/cel25c/2_A_hires.png"},
+{num:"113/cel25c",name:"莱希拉姆 Reshiram",rarity:"Classic Collection",lang:"EN",src:"25th Celebrations",price:"$16.68",img:"https://images.pokemontcg.io/cel25c/113_A_hires.png"},
+{num:"54/cel25c",name:"超梦EX Mewtwo-EX",rarity:"Classic Collection",lang:"EN",src:"25th Celebrations",price:"$14.64",img:"https://images.pokemontcg.io/cel25c/54_A_hires.png"},
+{num:"15/cel25c",name:"妙蛙花 Venusaur",rarity:"Classic Collection",lang:"EN",src:"25th Celebrations",price:"$11.42",img:"https://images.pokemontcg.io/cel25c/15_A_hires.png"},
+{num:"7/cel25",name:"飞天皮卡丘VMAX",rarity:"VMAX",lang:"EN",src:"25th Celebrations",price:"$7.49",img:"https://images.pokemontcg.io/cel25/7_hires.png",note:"25周年限定"},
+{num:"9/cel25",name:"冲浪皮卡丘VMAX",rarity:"VMAX",lang:"EN",src:"25th Celebrations",price:"$7.26",img:"https://images.pokemontcg.io/cel25/9_hires.png",note:"25周年限定"},
+{num:"5/cel25",name:"皮卡丘 Pikachu",rarity:"Rare Holo",lang:"EN",src:"25th Celebrations",price:"$6.98",img:"https://images.pokemontcg.io/cel25/5_hires.png",note:"25周年闪卡"},
+{num:"8/cel25c",name:"暗黑暴鲤龙 Dark Gyarados",rarity:"Classic Collection",lang:"EN",src:"25th Celebrations",price:"$5.59",img:"https://images.pokemontcg.io/cel25c/8_A_hires.png"},
+{num:"6/cel25",name:"飞天皮卡丘V",rarity:"V",lang:"EN",src:"25th Celebrations",price:"$3.40",img:"https://images.pokemontcg.io/cel25/6_hires.png"},
+{num:"8/cel25",name:"冲浪皮卡丘V",rarity:"V",lang:"EN",src:"25th Celebrations",price:"$4.27",img:"https://images.pokemontcg.io/cel25/8_hires.png"}
+];
+
+// === 麦当劳合作全系列 (2021 25周年版 + 已有2014-2024) ===
+// === 麦当劳联名 (卡面带McDonald's金拱门标志) ===
+var DATA_MCD_ALL = [
+// 每年皮卡丘 (卡上印有金拱门logo)
+{num:"25/mcd21",name:"皮卡丘 Pikachu (25周年)",rarity:"Holo/McD",lang:"EN",src:"McDonald's 2021",price:"$21.24",img:"https://images.pokemontcg.io/mcd21/25_hires.png",note:"25周年 金拱门标志"},
+{num:"6/mcd19",name:"皮卡丘 Pikachu",rarity:"Holo/McD",lang:"EN",src:"McDonald's 2019",price:"$21.64",img:"https://images.pokemontcg.io/mcd19/6_hires.png",note:"2019 金拱门标志"},
+{num:"7/mcd22",name:"皮卡丘 Pikachu",rarity:"Holo/McD",lang:"EN",src:"McDonald's 2022",price:"$4.42",img:"https://images.pokemontcg.io/mcd22/7_hires.png",note:"2022 金拱门标志"},
+{num:"4/mcd18",name:"皮卡丘 Pikachu",rarity:"Holo/McD",lang:"EN",src:"McDonald's 2018",price:"$5-15",img:"https://images.pokemontcg.io/mcd18/4_hires.png",note:"2018 金拱门标志"},
+{num:"5/mcd17",name:"皮卡丘 Pikachu",rarity:"Holo/McD",lang:"EN",src:"McDonald's 2017",price:"$5-15",img:"https://images.pokemontcg.io/mcd17/5_hires.png",note:"2017 金拱门标志"},
+{num:"6/mcd16",name:"皮卡丘 Pikachu",rarity:"Holo/McD",lang:"EN",src:"McDonald's 2016",price:"$5-15",img:"https://images.pokemontcg.io/mcd16/6_hires.png",note:"2016 金拱门标志"},
+{num:"6/mcd15",name:"皮卡丘 Pikachu",rarity:"Holo/McD",lang:"EN",src:"McDonald's 2015",price:"$5-15",img:"https://images.pokemontcg.io/mcd15/6_hires.png",note:"2015 金拱门标志"},
+{num:"5/mcd14",name:"皮卡丘 Pikachu",rarity:"Holo/McD",lang:"EN",src:"McDonald's 2014",price:"$5-15",img:"https://images.pokemontcg.io/mcd14/5_hires.png",note:"2014 金拱门标志"},
+// 2021 25周年 核心御三家 (全部带金拱门)
+{num:"1/mcd21",name:"妙蛙种子 Bulbasaur",rarity:"Holo/McD",lang:"EN",src:"McDonald's 2021",price:"$4.70",img:"https://images.pokemontcg.io/mcd21/1_hires.png",note:"25周年 金拱门标志"},
+{num:"9/mcd21",name:"小火龙 Charmander",rarity:"Holo/McD",lang:"EN",src:"McDonald's 2021",price:"$3.84",img:"https://images.pokemontcg.io/mcd21/9_hires.png",note:"25周年 金拱门标志"},
+{num:"17/mcd21",name:"杰尼龟 Squirtle",rarity:"Holo/McD",lang:"EN",src:"McDonald's 2021",price:"$3-8",img:"https://images.pokemontcg.io/mcd21/17_hires.png",note:"25周年 金拱门标志"},
+// 其他年份热门 (带金拱门)
+{num:"12/mcd19",name:"伊布 Eevee",rarity:"Holo/McD",lang:"EN",src:"McDonald's 2019",price:"$5-15",img:"https://images.pokemontcg.io/mcd19/12_hires.png",note:"2019 金拱门标志"},
+{num:"5/mcd22",name:"比克提尼 Victini",rarity:"Holo/McD",lang:"EN",src:"McDonald's 2022",price:"$1-5",img:"https://images.pokemontcg.io/mcd22/5_hires.png",note:"2022 金拱门标志"}
+];
+
+// === OPCG 高价SEC + 红牛合作 ===
+var DATA_OPCG_TOP = [
+{num:"OP05-119",name:"路飞五档 Luffy Gear 5",rarity:"SEC",lang:"ALL",src:"PRB-01 THE BEST",price:"$9,999",img:"opcg-imgs/OP05-119_p1.png",note:"全游最高价！五档形态"},
+{num:"EB01-006",name:"乔巴 Chopper SEC",rarity:"SEC",lang:"ALL",src:"PRB-01 THE BEST",price:"$3,450",img:"opcg-imgs/EB01-006_p1.png",note:"EB01 Extra Booster"},
+{num:"OP02-013",name:"艾斯 Ace SEC",rarity:"SEC",lang:"ALL",src:"PRB-01 THE BEST",price:"$3,069",img:"opcg-imgs/OP02-013_p1.png",note:"白胡子海贼团"},
+{num:"OP06-118",name:"索隆 Zoro SEC",rarity:"SEC",lang:"ALL",src:"PRB-01 THE BEST",price:"$1,875",img:"opcg-imgs/OP06-118_p1.png",note:"三刀流"},
+{num:"OP03-122",name:"狙击王 Sogeking SEC",rarity:"SEC",lang:"ALL",src:"PRB-01 THE BEST",price:"$1,500",img:"opcg-imgs/OP03-122_p1.png",note:"乌索普变身"},
+{num:"OP05-069",name:"罗 Law SEC",rarity:"SEC",lang:"ALL",src:"PRB-01 THE BEST",price:"$1,200",img:"opcg-imgs/OP01-047_p1.png",note:"超新星/心脏海贼团"},
+{num:"OP05-074",name:"基德 Kid SEC",rarity:"SEC",lang:"ALL",src:"PRB-01 THE BEST",price:"$799",img:"opcg-imgs/OP01-051_p1.png",note:"超新星"},
+{num:"OP04-083",name:"萨博 Sabo SEC",rarity:"SEC",lang:"ALL",src:"PRB-01 THE BEST",price:"$600",img:"opcg-imgs/PRB02-005_p1.png",note:"革命军参谋长"},
+{num:"OP06-106",name:"光月日和 Hiyori SEC",rarity:"SEC",lang:"ALL",src:"PRB-01 THE BEST",price:"$146",img:"opcg-imgs/OP06-106_p1.png"},
+{num:"PRB02-005",name:"路飞 Luffy 红牛双DON",rarity:"AA/DON",lang:"JP/CHS",src:"Red Bull × PRB-02",price:"¥500-2,000",img:"opcg-imgs/PRB02-005_p1.png",note:"★红牛独占红章促销★"},
+{num:"OP02-004",name:"白胡子 Newgate",rarity:"SR",lang:"ALL",src:"OP-02",price:"$6-50",img:"opcg-imgs/OP02-004_p1.png"},
+{num:"OP02-018",name:"马尔科 Marco",rarity:"SR",lang:"ALL",src:"OP-02",price:"$9-50",img:"opcg-imgs/OP02-018_p1.png"},
+{num:"OP01-070",name:"鹰眼 Mihawk",rarity:"SR",lang:"ALL",src:"OP-01",price:"$10-60",img:"opcg-imgs/OP01-070_p1.png"}
+];
+
+var DATA_OPCG_ANNIV = [
+// === PRB-01 一周年 THE BEST (2024.7) ===
+{num:"OP01-016",name:"娜美 Nami AA",rarity:"AA/SEC",lang:"JP/CHS/EN",src:"PRB-01 一周年卡册",price:"¥800-2,500+",img:"opcg-imgs/OP01-016_p1.png",note:"最抢手周年卡！",psa10:"PSA10 ~¥973"},
+{num:"PRB01-001",name:"山治 Sanji",rarity:"SEC",lang:"JP/EN",src:"PRB-01 专属新卡",price:"$155",img:"opcg-imgs/PRB01-001_p1.png",note:"PRB01唯一专属编号"},
+{num:"OP01-120",name:"香克斯 Shanks AA",rarity:"SEC",lang:"ALL",src:"PRB-01 一周年",price:"$1,500",img:"opcg-imgs/OP01-120_p1.png",note:"红发四皇"},
+{num:"OP01-003",name:"路飞 Luffy AA",rarity:"AA/Alt Art",lang:"JP/CHS",src:"PRB-01 THE BEST",price:"¥300-1,000",img:"opcg-imgs/OP01-003_p1.png"},
+{num:"OP01-001",name:"索隆 Zoro AA",rarity:"AA/Alt Art",lang:"ALL",src:"PRB-01 THE BEST",price:"¥200-600",img:"opcg-imgs/OP01-001_p1.png"},
+{num:"OP01-121",name:"大和 Yamato SP",rarity:"SP/AA",lang:"ALL",src:"PRB-01 一周年",price:"¥200-550",img:"opcg-imgs/OP01-121_p1.png",note:"凯多之子"},
+{num:"OP01-078",name:"女帝 Hancock SP",rarity:"SP",lang:"ALL",src:"PRB-01 一周年",price:"¥150-450",img:"opcg-imgs/OP01-078_p1.png",note:"七武海"},
+{num:"OP01-024",name:"路飞 Luffy SR",rarity:"SR",lang:"ALL",src:"OP-01 Romance Dawn",price:"¥80-250",img:"opcg-imgs/OP01-024_p1.png"},
+// === PRB-02 二周年 THE BEST Vol.2 (2025.7) ===
+{num:"PRB02-005",name:"路飞 Luffy 双DON",rarity:"AA/DON",lang:"JP/CHS",src:"PRB-02 二周年",price:"¥500-2,000",img:"opcg-imgs/PRB02-005_p1.png",note:"红牛双DON独占红章"},
+{num:"PRB02-001",name:"PRB02-001",rarity:"SR",lang:"JP/EN",src:"PRB-02 THE BEST V2",price:"$20-80",img:"opcg-imgs/PRB02-001_p1.png"},
+{num:"PRB02-002",name:"PRB02-002",rarity:"SR",lang:"JP/EN",src:"PRB-02 THE BEST V2",price:"$15-60",img:"opcg-imgs/PRB02-002_p1.png"},
+{num:"PRB02-003",name:"PRB02-003",rarity:"SR",lang:"JP/EN",src:"PRB-02 THE BEST V2",price:"$15-60",img:"opcg-imgs/PRB02-003_p1.png"},
+{num:"PRB02-004",name:"PRB02-004",rarity:"SR",lang:"JP/EN",src:"PRB-02 THE BEST V2",price:"$15-60",img:"opcg-imgs/PRB02-004_p1.png"},
+{num:"PRB02-006",name:"PRB02-006",rarity:"SR",lang:"JP/EN",src:"PRB-02 THE BEST V2",price:"$15-60",img:"opcg-imgs/PRB02-006_p1.png"},
+{num:"PRB02-007",name:"PRB02-007",rarity:"SR",lang:"JP/EN",src:"PRB-02 THE BEST V2",price:"$15-60",img:"opcg-imgs/PRB02-007_p1.png"},
+{num:"PRB02-008",name:"PRB02-008",rarity:"SR",lang:"JP/EN",src:"PRB-02 THE BEST V2",price:"$15-60",img:"opcg-imgs/PRB02-008_p1.png"},
+// === 三周年 PRB-03 ===
+{num:"PR-3Y-HIDDEN",name:"波妮 Bonney 隐藏款",rarity:"AA/编号",lang:"JP/CHS",src:"PRB-03 三周年",price:"¥5,000-9,000+",img:"opcg-imgs/OP01-016.png",note:"概率极低！爆品"},
+// === 25周年 / JUMP联名 P卡系列 ===
+{num:"P-001",name:"路飞 Luffy (25周年)",rarity:"P",lang:"JP",src:"25周年P卡",price:"$20-80",img:"opcg-imgs/P-001_p1.png",note:"25周年纪念"},
+{num:"P-001",name:"路飞 Luffy P-001",rarity:"P",lang:"JP",src:"Promo P-001",price:"$10-40",img:"opcg-imgs/P-001.png"},
+{num:"P-002",name:"索隆 Zoro P-002",rarity:"P",lang:"JP",src:"Promo P-002",price:"$8-30",img:"opcg-imgs/P-002.png",note:"JUMP联名"},
+{num:"P-003",name:"娜美 Nami P-003",rarity:"P",lang:"JP",src:"Promo P-003",price:"$10-50",img:"opcg-imgs/P-003_p1.png",note:"JUMP联名"},
+{num:"P-004",name:"乌索普 Usopp P-004",rarity:"P",lang:"JP",src:"Promo P-004",price:"$5-20",img:"opcg-imgs/P-004.png"},
+{num:"P-005",name:"山治 Sanji P-005",rarity:"P",lang:"JP",src:"Promo P-005",price:"$5-20",img:"opcg-imgs/P-005.png"},
+{num:"P-006",name:"乔巴 Chopper P-006",rarity:"P",lang:"JP",src:"Promo P-006",price:"$5-20",img:"opcg-imgs/P-006.png"},
+{num:"P-007",name:"罗宾 Robin P-007",rarity:"P",lang:"JP",src:"Promo P-007",price:"$8-30",img:"opcg-imgs/P-007.png",note:"JUMP联名"},
+{num:"P-008",name:"弗兰奇 Franky P-008",rarity:"P",lang:"JP",src:"Promo P-008",price:"$5-20",img:"opcg-imgs/P-008.png"},
+{num:"P-009",name:"布鲁克 Brook P-009",rarity:"P",lang:"JP",src:"Promo P-009",price:"$5-20",img:"opcg-imgs/P-009.png"},
+{num:"P-010",name:"甚平 Jinbe P-010",rarity:"P",lang:"JP",src:"Promo P-010",price:"$5-20",img:"opcg-imgs/P-010.png"},
+{num:"P-028",name:"艾斯 Ace (Event)",rarity:"P",lang:"JP",src:"Event Pack Vol.1",price:"$15-50",img:"opcg-imgs/P-028_p1.png",note:"活动特典"},
+{num:"P-029",name:"巴托洛米奥 Bartolomeo",rarity:"P",lang:"JP",src:"Event Promo",price:"$5-15",img:"opcg-imgs/P-029_p1.png"},
+{num:"P-030",name:"P-030",rarity:"P",lang:"JP",src:"Event Promo",price:"$5-15",img:"opcg-imgs/P-030_p1.png"},
+// === ST构筑包关键卡 ===
+{num:"ST21-014",name:"路飞 Luffy ST21 SR",rarity:"SR",lang:"ALL",src:"ST-21",price:"¥200-800",img:"opcg-imgs/ST21-014_p1.png",note:"航海王ST21"},
+{num:"ST21-001",name:"路飞 Luffy ST21 Leader",rarity:"Leader",lang:"ALL",src:"ST-21",price:"¥100-300",img:"opcg-imgs/ST21-001_p1.png"},
+{num:"ST01-012",name:"索隆 Zoro ST01",rarity:"SR",lang:"ALL",src:"ST-01 草帽一伙",price:"$30-100",img:"opcg-imgs/ST01-012_p1.png"},
+{num:"ST01-013",name:"娜美 Nami ST01",rarity:"SR",lang:"ALL",src:"ST-01 草帽一伙",price:"$20-80",img:"opcg-imgs/ST01-013_p1.png"},
+{num:"ST02-013",name:"基德 Kid ST02",rarity:"SR",lang:"ALL",src:"ST-02 最恶世代",price:"$15-60",img:"opcg-imgs/ST02-013_p1.png"},
+{num:"ST13-001",name:"路飞&罗 Leader",rarity:"Leader",lang:"ALL",src:"ST-13 联手出击",price:"$20-80",img:"opcg-imgs/ST13-001_p1.png"},
+{num:"ST13-015",name:"路飞&罗 SR",rarity:"SR",lang:"ALL",src:"ST-13 联手出击",price:"$25-100",img:"opcg-imgs/ST13-015_p1.png"}
+];
+var DATA_OPCG_FILM = [
+{num:"OP04-001",name:"Uta 领袖卡",rarity:"Leader/AA",lang:"ALL",src:"FILM RED OP-04",price:"¥300-1,000",img:"opcg-imgs/OP04-001_p1.png",note:"FILM RED核心"},
+{num:"OP04-112",name:"Shanks SEC",rarity:"SEC",lang:"ALL",src:"FILM RED OP-04",price:"¥400-1,500",img:"opcg-imgs/OP04-112_p1.png",note:"SEC稀有"},
+{num:"OP05-001",name:"Young Shanks Leader",rarity:"Leader/AA",lang:"ALL",src:"FILM RED HAIR OP-05",price:"¥400-1,500",img:"opcg-imgs/OP05-001_p1.png"},
+{num:"OP05-098",name:"Shanks SEC (OP05)",rarity:"SEC",lang:"ALL",src:"FILM RED HAIR OP-05",price:"¥300-1,200",img:"opcg-imgs/OP05-098_p1.png",note:"红发青年版"},
+{num:"OP04-058",name:"Shanks SR",rarity:"SR",lang:"ALL",src:"FILM RED OP-04",price:"¥150-500",img:"opcg-imgs/OP04-058_p1.png",note:"四皇"},
+{num:"OP04-031",name:"Gordon SR",rarity:"SR",lang:"ALL",src:"FILM RED OP-04",price:"¥50-200",img:"opcg-imgs/OP04-031_p1.png"},
+{num:"OP04-044",name:"Luffy OP04",rarity:"SR",lang:"ALL",src:"FILM RED OP-04",price:"¥80-300",img:"opcg-imgs/OP04-044_p1.png",note:"Film/草帽"},
+{num:"OP05-060",name:"Koby SR",rarity:"SR",lang:"ALL",src:"OP-05",price:"¥60-200",img:"opcg-imgs/OP05-060_p1.png"},
+{num:"OP05-074",name:"Luffy OP05",rarity:"SR",lang:"ALL",src:"OP-05",price:"¥80-250",img:"opcg-imgs/OP05-074_p1.png"},
+{num:"P-011",name:"Uta P卡",rarity:"Leader",lang:"JP",src:"FILM RED 观影P卡",price:"¥200-600",img:"opcg-imgs/P-011.png",note:"观影附赠"},
+{num:"P-016",name:"Shanks SR P卡",rarity:"SR",lang:"JP",src:"FILM RED P卡",price:"¥200-600",img:"opcg-imgs/P-016.png",note:"四皇"},
+{num:"P-022",name:"Luffy SR P卡",rarity:"SR",lang:"JP",src:"FILM RED P卡",price:"¥80-250",img:"opcg-imgs/P-022.png"},
+{num:"P-017",name:"Law SR P卡",rarity:"SR",lang:"JP",src:"FILM RED P卡",price:"¥100-300",img:"opcg-imgs/P-017.png"},
+{num:"P-021",name:"Beckman SR P卡",rarity:"SR",lang:"JP",src:"FILM RED P卡",price:"¥80-250",img:"opcg-imgs/P-021.png",note:"红发海贼团"},
+{num:"P-023",name:"Yasopp SR P卡",rarity:"SR",lang:"JP",src:"FILM RED P卡",price:"¥80-230",img:"opcg-imgs/P-023.png",note:"红发海贼团"}
+];
+var DATA_OPCG_EXCL = [
+{num:"OP01-016",name:"Nami 旗袍版 (简中)",rarity:"AA",lang:"CHS",src:"一周年 简中版",price:"¥900-2,500",img:"opcg-imgs/OP01-016_p1.png",note:"简中独占",psa10:"~¥930"},
+{num:"OP01-016",name:"Nami 25周年画册 (日版)",rarity:"AA",lang:"JP",src:"一周年 日版",price:"¥800-2,000",img:"opcg-imgs/OP01-016_p1.png",note:"日版独占",psa10:"~¥973"},
+{num:"OP01-016",name:"Nami 英文版",rarity:"AA",lang:"EN",src:"一周年 英文版",price:"¥600-1,500",img:"opcg-imgs/OP01-016_p1.png",note:"英文版"},
+{num:"OP01-120",name:"Shanks AA (简中)",rarity:"AA",lang:"CHS",src:"OP-01 简中版",price:"¥300-1,000",img:"opcg-imgs/OP01-120_p1.png",note:"简中区域"},
+{num:"ST21-001",name:"Luffy Leader (简中)",rarity:"Leader",lang:"CHS",src:"ST-21 简中版",price:"¥80-200",img:"opcg-imgs/ST21-001_p1.png",note:"简中ST21"},
+{num:"ST21-014",name:"Luffy SR异画 (简中)",rarity:"SR",lang:"CHS",src:"ST-21 简中版",price:"¥200-600",img:"opcg-imgs/ST21-014_p1.png",note:"简中ST21异画"}
+];
+
+// ===== LIGHTBOX =====
+function openLightbox(imgSrc, name, detail) {
+  var lb = document.getElementById('lightbox');
+  document.getElementById('lb-img').src = imgSrc;
+  document.getElementById('lb-name').textContent = name;
+  document.getElementById('lb-detail').textContent = detail;
+  lb.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeLightbox(e) {
+  if (e.target.tagName === 'IMG') return;
+  document.getElementById('lightbox').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    document.getElementById('lightbox').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+});
+
+// ===== RENDER =====
+function renderCard(c) {
+  var hasImg = c.img && c.img.length > 10;
+  var imgTag = hasImg
+    ? '<img src="' + c.img + '" alt="' + (c.name||'').replace(/"/g,'&quot;') + '" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">' +
+      '<div class="img-error-overlay" style="display:none"><span>&#127183;</span><small>加载失败</small></div>'
+    : '<div class="img-error-overlay"><span style="font-size:1.3em">&#127183;</span><small>' + (c.name||'') + '</small></div>';
+
+  var dataAttr = hasImg ? ' data-img="' + c.img.replace(/"/g,'&quot;') + '" data-cname="' + (c.name||'').replace(/"/g,'&quot;') + '" data-detail="' + ((c.rarity||'') + ' | ' + (c.src||'') + ' | ' + (c.price||'')).replace(/"/g,'&quot;') + '"' : '';
+
+  return '<div class="card-item"' + dataAttr + '>' +
+    '<div class="card-img-wrap">' + imgTag +
+    '<div class="card-overlay">' +
+    '<span class="rarity-badge">' + (c.rarity || '?') + '</span>' +
+    (c.lang ? '<span class="lang-badge">' + c.lang + '</span>' : '') +
+    '</div></div>' +
+    '<div class="card-body">' +
+    '<div class="card-name">' + (c.name||'') + ' <span class="card-number">' + (c.num||'') + '</span></div>' +
+    '<div class="card-source">' + (c.src||'') + (c.note ? ' | ' + c.note : '') + '</div>' +
+    '<div class="card-meta">' +
+    '<div class="attr-tags">' +
+    (c.psa10 ? '<span class="attr-tag">' + c.psa10 + '</span>' : '') +
+    '</div>' +
+    '<div class="price-info"><div class="price-value">' + (c.price || '?') + '</div><div class="price-note">市场价</div></div>' +
+    '</div></div></div>';
+}
+
+function fillGrid(id, data) {
+  var el = document.getElementById(id);
+  if (!el || !data || !data.length) return;
+  el.innerHTML = data.map(renderCard).join('');
+}
+
+// ===== INIT =====
+var DB = {
+  featured: DATA_FEATURED, c151: DATA_151, sv8pt5: DATA_SV8PT5, sv8: DATA_SV8,
+  sv1: DATA_SV1, sv2: DATA_SV2, sv3: DATA_SV3, ptcg_chs: DATA_PTCG_CHS,
+  cel25: DATA_CEL25, mcd_all: DATA_MCD_ALL,
+  opcg_anniv: DATA_OPCG_ANNIV, opcg_top: DATA_OPCG_TOP,
+  opcg_film: DATA_OPCG_FILM, opcg_excl: DATA_OPCG_EXCL
+};
+
+fillGrid('grid-featured', DB.featured);
+fillGrid('grid-151', DB.c151);
+fillGrid('grid-sv8pt5', DB.sv8pt5);
+fillGrid('grid-sv8', DB.sv8);
+fillGrid('grid-sv1', DB.sv1);
+fillGrid('grid-sv2', DB.sv2);
+fillGrid('grid-sv3', DB.sv3);
+fillGrid('grid-ptcg-chs', DB.ptcg_chs);
+fillGrid('grid-cel25', DB.cel25);
+fillGrid('grid-mcd-all', DB.mcd_all);
+fillGrid('grid-opcg-anniv', DB.opcg_anniv);
+fillGrid('grid-opcg-top', DB.opcg_top);
+fillGrid('grid-opcg-film', DB.opcg_film);
+fillGrid('grid-opcg-excl', DB.opcg_excl);
+
+// Stats
+var total = 0;
+for (var k in DB) { if (Array.isArray(DB[k])) total += DB[k].length; }
+var ptcgCount = (DB.featured||[]).length + (DB.c151||[]).length + (DB.sv8pt5||[]).length + (DB.sv8||[]).length + (DB.sv1||[]).length + (DB.sv2||[]).length + (DB.sv3||[]).length + (DB.ptcg_chs||[]).length + (DB.cel25||[]).length + (DB.mcd_all||[]).length;
+var opcgCount = (DB.opcg_anniv||[]).length + (DB.opcg_top||[]).length + (DB.opcg_film||[]).length + (DB.opcg_excl||[]).length;
+document.getElementById('topStats').innerHTML =
+  '<div class="stat-item"><div class="stat-num" style="color:var(--ptcg-color)">' + ptcgCount + '</div><div class="stat-label">PTCG</div></div>' +
+  '<div class="stat-item"><div class="stat-num" style="color:var(--opcg-color)">' + opcgCount + '</div><div class="stat-label">OPCG</div></div>' +
+  '<div class="stat-item"><div class="stat-num" style="color:var(--accent-gold)">' + total + '+</div><div class="stat-label">总收录</div></div>' +
+  '<div class="stat-item"><div class="stat-num" style="color:#f1c40f">REAL</div><div class="stat-label">真实卡图+价格</div></div>';
+
+// Tab switching
+document.getElementById('navTabs').addEventListener('click', function(e) {
+  var tab = e.target.closest('.nav-tab');
+  if (!tab) return;
+  document.querySelectorAll('.nav-tab').forEach(function(t) { t.classList.remove('active'); });
+  tab.classList.add('active');
+  document.querySelectorAll('.section').forEach(function(s) { s.classList.remove('active'); });
+  var target = document.getElementById(tab.dataset.target);
+  if (target) target.classList.add('active');
+});
+
+// Card click -> lightbox (event delegation)
+document.addEventListener('click', function(e) {
+  var card = e.target.closest('.card-item');
+  if (!card) return;
+  var img = card.getAttribute('data-img');
+  if (!img) return;
+  openLightbox(img, card.getAttribute('data-cname') || '', card.getAttribute('data-detail') || '');
+});
+</script>
+</body>
+</html>
