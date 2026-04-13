@@ -279,6 +279,7 @@ function render() {
     return '<div class="card">' +
       '<span class="icon">' + esc(it.icon || '📄') + '</span>' +
       '<h3>' + esc(it.name) + '</h3>' +
+      '<p style="font-size:12px;color:#888;word-break:break-all;">' + esc(it.url || '') + '</p>' +
       '<p>' + esc(it.desc || '') + '</p>' +
       '<span class="tag tag-' + it.cat + '">' + catLabel(it.cat) + '</span>' +
       '<div class="card-actions">' +
