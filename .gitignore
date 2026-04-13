@@ -2,3 +2,6 @@
 *.swp
 *~
 .workbuddy/
+
+# 本地备份目录
+backup/
