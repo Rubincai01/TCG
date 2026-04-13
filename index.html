@@ -241,9 +241,7 @@
 
 <script>
 const BASE = 'https://rubincai01.github.io/TCG/';
-const STORAGE_KEY = 'hub_links';
-const LINK_VERSION = 2;  // 递增此值可强制刷新用户缓存
-const VERSION_KEY = 'hub_links_version';
+const STORAGE_KEY = 'hub_links_v2';
 let items = [];
 let pendingDel = null;
 let editingIdx = null;
@@ -257,17 +255,11 @@ const DEFAULT_ITEMS = [
 ];
 
 function load() {
-  // 版本不一致时清除旧缓存，使用最新默认链接
-  var ver = parseInt(localStorage.getItem(VERSION_KEY) || '0');
-  if (ver !== LINK_VERSION) {
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.setItem(VERSION_KEY, String(LINK_VERSION));
-  }
   try {
     var s = localStorage.getItem(STORAGE_KEY);
     if (s) { items = JSON.parse(s); return; }
   } catch(e) {}
-  // first time or after version reset
+  // first time
   items = JSON.parse(JSON.stringify(DEFAULT_ITEMS));
   save();
 }
