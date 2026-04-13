@@ -33,7 +33,7 @@
     .hero { text-align: center; margin-bottom: 40px; }
     .hero h1 { font-size: 36px; letter-spacing: -0.5px; margin-bottom: 8px; }
     .hero p { color: var(--muted); font-size: 15px; line-height: 1.6; }
-    .hero .actions { display: flex; gap: 10px; justify-content: center; margin-top: 18px; }
+    .hero .actions { display: flex; gap: 10px; justify-content: center; margin-top: 18px; flex-wrap: wrap; }
 
     /* buttons */
     button, .btn {
@@ -112,10 +112,30 @@
     /* footer */
     .footer { text-align: center; margin-top: 48px; color: var(--muted); font-size: 12px; opacity: .6; }
 
+    /* sync panel */
+    .sync-panel {
+      background: var(--panel); border: 1px solid var(--line);
+      border-radius: 14px; padding: 14px 18px; margin-top: 20px;
+      box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px;
+      flex-wrap: wrap; justify-content: center;
+    }
+    .sync-panel input {
+      background: rgba(255,255,255,.06); border: 1px solid var(--line);
+      color: var(--text); padding: 8px 12px; border-radius: 8px; font-size: 13px;
+      outline: none; width: 300px; font-family: monospace; flex: 1; min-width: 200px;
+    }
+    .sync-panel input:focus { border-color: var(--blue); }
+    .sync-status { font-size: 13px; font-weight: 600; white-space: nowrap; }
+    .sync-ok { color: var(--green); }
+    .sync-off { color: var(--yellow); }
+    .sync-err { color: var(--red); }
+
     @media (max-width: 600px) {
       .form-row { flex-direction: column; }
       .grid { grid-template-columns: 1fr; }
       .hero h1 { font-size: 26px; }
+      .sync-panel { flex-direction: column; align-items: stretch; }
+      .sync-panel input { width: 100%; }
     }
   </style>
 </head>
@@ -129,6 +149,15 @@
         <button class="btn-green btn-sm" onclick="toggleAdd()">＋ 添加页面</button>
         <button class="btn-sm btn-outline" onclick="exportData()">📤 导出</button>
         <button class="btn-sm btn-outline" onclick="importData()">📥 导入</button>
+      </div>
+
+      <!-- sync panel -->
+      <div class="sync-panel">
+        <span style="color:var(--muted);font-size:13px">☁️ 云端同步</span>
+        <input id="tokenInput" type="password" placeholder="输入 GitHub Token 启用跨设备同步" />
+        <button class="btn-sm" id="syncSaveBtn">保存并同步</button>
+        <button class="btn-sm btn-outline" id="syncPullBtn">拉取云端</button>
+        <span id="syncStatus" class="sync-status sync-off">未连接</span>
       </div>
     </div>
 
@@ -177,7 +206,7 @@
     <div class="grid" id="cardGrid"></div>
 
     <!-- footer -->
-    <div class="footer">Rubin's Hub · 数据存储在浏览器本地 · 支持导出/导入备份</div>
+    <div class="footer">Rubin's Hub · 支持导出/导入 ☁️ 输入GitHub Token启用云端同步（跨设备一致）</div>
   </div>
 
   <!-- delete confirm -->
@@ -289,9 +318,7 @@ function addItem() {
     icon: document.getElementById('fIcon').value || '📄',
     desc: document.getElementById('fDesc').value.trim()
   });
-  save(); render();
-  toggleAdd();
-  // clear form
+  save(); render(); toggleAdd(); autoSync();
   ['fName','fUrl','fIcon','fDesc'].forEach(function(id){document.getElementById(id).value=''});
   document.getElementById('fCat').selectedIndex = 0;
 }
@@ -308,7 +335,7 @@ function confirmDel() {
   items.splice(pendingDel, 1);
   save(); render();
   pendingDel = null;
-  closeDel();
+  closeDel(); autoSync();
 }
 
 // edit
@@ -333,7 +360,7 @@ function saveEdit() {
     desc: document.getElementById('eDesc').value.trim()
   };
   save(); render();
-  closeEdit();
+  closeEdit(); autoSync();
 }
 
 // export / import
@@ -355,7 +382,7 @@ function importData() {
     reader.onload = function() {
       try {
         var data = JSON.parse(reader.result);
-        if (Array.isArray(data)) { items = data; save(); render(); alert('导入成功！共 ' + data.length + ' 条记录'); }
+        if (Array.isArray(data)) { items = data; save(); render(); autoSync(); alert('导入成功！共 ' + data.length + ' 条记录'); }
         else alert('文件格式不正确');
       } catch(e) { alert('解析失败：' + e.message); }
     };
@@ -363,6 +390,142 @@ function importData() {
   };
   inp.click();
 }
+
+// =====================================================
+// GitHub Gist 云端同步
+// =====================================================
+const GIST_FILENAME = 'hub_links.json';
+const TOKEN_KEY = 'hub_github_token';
+const GIST_ID_KEY = 'hub_gist_id';
+let gistId = null;
+
+function getToken() { return localStorage.getItem(TOKEN_KEY) || ''; }
+function setToken(t) { localStorage.setItem(TOKEN_KEY, t); }
+function getGistId() { return localStorage.getItem(GIST_ID_KEY) || ''; }
+function setGistId(id) { localStorage.setItem(GIST_ID_KEY, id); gistId = id; }
+
+function updateSyncStatus(text, cls) {
+  var el = document.getElementById('syncStatus');
+  if (!el) return;
+  el.textContent = text;
+  el.className = 'sync-status ' + cls;
+}
+
+async function createGist(token) {
+  var res = await fetch('https://api.github.com/gists', {
+    method: 'POST',
+    headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ description: "Rubin's Hub Links", public: false,
+      files: { [GIST_FILENAME]: { content: JSON.stringify(items, null, 2) } } })
+  });
+  if (!res.ok) throw new Error('创建Gist失败: ' + res.status);
+  var data = await res.json();
+  return data.id;
+}
+
+async function updateGist(token, gid) {
+  var res = await fetch('https://api.github.com/gists/' + gid, {
+    method: 'PATCH',
+    headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ files: { [GIST_FILENAME]: { content: JSON.stringify(items, null, 2) } } })
+  });
+  if (!res.ok) throw new Error('更新Gist失败: ' + res.status);
+}
+
+async function readGist(token, gid) {
+  var res = await fetch('https://api.github.com/gists/' + gid, {
+    headers: { 'Authorization': 'token ' + token } });
+  if (!res.ok) throw new Error('读取Gist失败: ' + res.status);
+  var data = await res.json();
+  if (data.files && data.files[GIST_FILENAME]) {
+    return JSON.parse(data.files[GIST_FILENAME].content);
+  }
+  return null;
+}
+
+async function findExistingGist(token) {
+  var res = await fetch('https://api.github.com/gists?per_page=30', {
+    headers: { 'Authorization': 'token ' + token } });
+  if (!res.ok) return null;
+  var gists = await res.json();
+  for (var i = 0; i < gists.length; i++) {
+    if (gists[i].files && gists[i].files[GIST_FILENAME]) return gists[i].id;
+  }
+  return null;
+}
+
+async function pushToCloud() {
+  var token = getToken(); if (!token) return;
+  try {
+    var gid = getGistId();
+    if (gid) { await updateGist(token, gid); }
+    else {
+      var existing = await findExistingGist(token);
+      if (existing) { setGistId(existing); await updateGist(token, existing); }
+      else { var newId = await createGist(token); setGistId(newId); }
+    }
+    updateSyncStatus('✅ 已同步 ' + new Date().toLocaleTimeString(), 'sync-ok');
+  } catch(e) { updateSyncStatus('❌ 同步失败: ' + e.message, 'sync-err'); }
+}
+
+async function pullFromCloud() {
+  var token = getToken();
+  if (!token) { updateSyncStatus('⚠️ 请先输入Token', 'sync-off'); return; }
+  try {
+    updateSyncStatus('⏳ 拉取中...', 'sync-off');
+    var gid = getGistId();
+    if (gid) {
+      try {
+        var data = await readGist(token, gid);
+        if (data && Array.isArray(data) && data.length > 0) {
+          items = data; save(); render();
+          updateSyncStatus('✅ 已拉取 ' + data.length + ' 条链接', 'sync-ok');
+          return;
+        }
+      } catch(e) { setGistId(''); gid = null; }
+    }
+    gid = await findExistingGist(token);
+    if (gid) {
+      setGistId(gid);
+      var data = await readGist(token, gid);
+      if (data && Array.isArray(data) && data.length > 0) {
+        items = data; save(); render();
+        updateSyncStatus('✅ 已拉取 ' + data.length + ' 条链接', 'sync-ok');
+        return;
+      }
+    }
+    updateSyncStatus('⚠️ 云端无数据，请先保存', 'sync-off');
+  } catch(e) { updateSyncStatus('❌ 拉取失败: ' + e.message, 'sync-err'); }
+}
+
+function autoSync() {
+  if (getToken()) setTimeout(pushToCloud, 1000);
+}
+
+// init sync UI
+(function() {
+  var savedToken = getToken();
+  if (savedToken) document.getElementById('tokenInput').value = savedToken;
+  gistId = getGistId();
+
+  document.getElementById('syncSaveBtn').addEventListener('click', function() {
+    var t = document.getElementById('tokenInput').value.trim();
+    if (!t) { updateSyncStatus('⚠️ 请输入Token', 'sync-off'); return; }
+    setToken(t); updateSyncStatus('⏳ 同步中...', 'sync-off'); pushToCloud();
+  });
+
+  document.getElementById('syncPullBtn').addEventListener('click', function() {
+    var t = document.getElementById('tokenInput').value.trim();
+    if (t) setToken(t);
+    pullFromCloud();
+  });
+
+  // auto pull on load if has token
+  if (savedToken) {
+    updateSyncStatus('⏳ 检查云端...', 'sync-off');
+    pullFromCloud().then(function() {}).catch(function(e){});
+  }
+})();
 
 // init
 load();
