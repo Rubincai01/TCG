@@ -936,10 +936,7 @@ document.addEventListener('keydown', function(e) {
 (function init() {
   // 恢复 Token 显示
   var savedToken = getToken();
-  if (savedToken) {
-    document.getElementById('tokenInput').value = savedToken;
-  }
-  // 不再在代码中预填Token，因为GitHub会自动检测并撤销出现在代码中的Token
+  if (savedToken) document.getElementById('tokenInput').value = savedToken;
 
   // 恢复 Gist ID
   gistId = getGistId();
