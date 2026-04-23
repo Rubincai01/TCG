@@ -1,0 +1,2015 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TCG卡牌全球市场监控 - Pokemon & One Piece</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #2c1318 0%, #4a1a2e 50%, #1a0a0e 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: linear-gradient(135deg, #1e1215 0%, #2a1520 100%);
+            border-radius: 20px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            border: 1px solid #5c2a3a;
+        }
+
+        .card-display {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+
+        .card-image {
+            width: 120px;
+            height: 168px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            object-fit: cover;
+        }
+
+        .card-details {
+            flex: 1;
+        }
+
+        .price-info {
+            display: flex;
+            gap: 20px;
+            margin: 10px 0;
+        }
+
+        .price-item {
+            background: #2a1a20;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border-left: 3px solid #8b5e6b;
+            color: #d4b8be;
+        }
+
+        .pop-info {
+            background: #2a2215;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border-left: 3px solid #c9a84c;
+            color: #d4c48a;
+        }
+
+        .external-links {
+            margin-top: 10px;
+        }
+
+        .link-btn {
+            display: inline-block;
+            padding: 4px 8px;
+            margin: 2px;
+            background: #6b3040;
+            color: #e8cdd3;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 12px;
+            transition: background 0.2s;
+        }
+
+        .link-btn:hover {
+            background: #8b4050;
+        }
+
+        .listing-item {
+            margin: 5px 0;
+            padding: 8px;
+            background: #2a1a20;
+            border-radius: 5px;
+            border-left: 3px solid #4a6a4a;
+        }
+
+        .listing-link {
+            color: #c08090;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .listing-link:hover {
+            text-decoration: underline;
+            color: #e8a0b0;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #3d1520, #5c2030, #4a2818);
+            color: #e8cdd3;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.03) 10px, rgba(255,255,255,0.03) 20px);
+            animation: shine 3s linear infinite;
+        }
+        @keyframes shine {
+            0% { transform: translateX(-100%) translateY(-100%); }
+            100% { transform: translateX(100%) translateY(100%); }
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.8;
+            font-size: 1.1em;
+        }
+
+        .search-section {
+            padding: 30px;
+            background: #1a0e12;
+            border-bottom: 1px solid #3d1a25;
+        }
+
+        .search-container {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 300px;
+            padding: 15px;
+            border: 2px solid #4a2530;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+            background: #2a1520;
+            color: #e8cdd3;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #8b4050;
+        }
+        .search-input::placeholder {
+            color: #7a5560;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #6b2535, #4a1a28);
+            color: #e8cdd3;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+            background: linear-gradient(135deg, #8b3545, #6b2535);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #7a5a20, #5a4018);
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 30px;
+        }
+
+        .card {
+            background: linear-gradient(135deg, #1e1215 0%, #251520 100%);
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            border: 1px solid #4a2530;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.4);
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #5c2030, #3d1520);
+            color: #e8cdd3;
+            padding: 20px;
+            font-weight: 600;
+            font-size: 1.2em;
+            position: relative;
+        }
+        .card-header::after {
+            content: '⚡';
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.5em;
+            opacity: 0.4;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        .card-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .card-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #3d1a25;
+            transition: background 0.2s;
+        }
+
+        .card-item:hover {
+            background: #2a1520;
+        }
+
+        .card-info {
+            flex: 1;
+        }
+
+        .card-name {
+            font-weight: 600;
+            color: #e8cdd3;
+            margin-bottom: 5px;
+        }
+
+        .card-number {
+            color: #8a6070;
+            font-size: 0.9em;
+        }
+
+        .card-price {
+            font-weight: 600;
+            color: #6dba82;
+            font-size: 1.1em;
+        }
+
+        .rank-badge {
+            background: linear-gradient(135deg, #8a6a20, #6a4a10);
+            color: #e8d8a0;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .market-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #5c2030, #3d1520);
+            color: #e8cdd3;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            opacity: 0.9;
+        }
+
+        .monitor-list {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .monitor-item {
+            background: linear-gradient(135deg, #2a2215, #352a18);
+            border-left: 4px solid #6a4a20;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            animation: pulse 2s infinite;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.02); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        
+        .pirate-theme {
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="%235c2030" opacity="0.3"/><circle cx="80" cy="40" r="1" fill="%238a6a20" opacity="0.3"/><circle cx="40" cy="80" r="1.5" fill="%234a1a28" opacity="0.3"/></svg>');
+        }
+
+        .new-badge {
+            background: #6b2535;
+            color: #e8a0b0;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7em;
+            margin-left: 10px;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .watchlist-card {
+            background: linear-gradient(135deg, #1e1215 0%, #251520 100%);
+            border: 1px solid #4a2530;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            transition: box-shadow 0.3s;
+        }
+        .watchlist-card:hover {
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+        .watchlist-card-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 20px;
+            border-bottom: 1px solid #3d1a25;
+        }
+        .watchlist-card-body {
+            padding: 0;
+        }
+        .listings-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #2a1520, #351a28);
+            cursor: pointer;
+            font-weight: 600;
+            color: #c08090;
+            font-size: 0.9em;
+            border-top: 1px solid #3d1a25;
+            user-select: none;
+        }
+        .listings-toggle:hover {
+            background: linear-gradient(135deg, #351a28, #3d2030);
+        }
+        .listings-toggle .arrow {
+            transition: transform 0.3s;
+            font-size: 0.8em;
+        }
+        .listings-toggle.open .arrow {
+            transform: rotate(180deg);
+        }
+        .listings-section {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease;
+        }
+        .listings-section.open {
+            max-height: 800px;
+        }
+        .listing-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 20px;
+            border-top: 1px solid #2a1520;
+            font-size: 0.9em;
+            transition: background 0.2s;
+        }
+        .listing-row:hover {
+            background: #2a1520;
+        }
+        .listing-row .platform-tag {
+            display: inline-block;
+            background: #5c2535;
+            color: #e8a0b0;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.75em;
+            font-weight: 600;
+            min-width: 50px;
+            text-align: center;
+        }
+        .listing-row .listing-title {
+            flex: 1;
+            margin: 0 12px;
+            color: #c08090;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .listing-row .listing-title:hover {
+            text-decoration: underline;
+            color: #e8a0b0;
+        }
+        .listing-row .listing-price {
+            font-weight: 700;
+            color: #6dba82;
+            white-space: nowrap;
+        }
+        .listing-row .listing-time {
+            color: #6a4a55;
+            font-size: 0.8em;
+            margin-left: 10px;
+            white-space: nowrap;
+        }
+
+        /* 监控清单两列网格 */
+        #myWatchlist {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            max-height: none;
+        }
+        .watchlist-card {
+            margin-bottom: 0;
+        }
+        .watchlist-card-header {
+            padding: 14px;
+            gap: 14px;
+        }
+        .watchlist-card-header .card-image {
+            width: 90px;
+            height: 126px;
+        }
+        .watchlist-card-header .card-name {
+            font-size: 0.95em;
+        }
+        .watchlist-card-header .card-number {
+            font-size: 0.8em;
+        }
+        .watchlist-card-header .price-info {
+            gap: 8px;
+            margin: 6px 0;
+            flex-wrap: wrap;
+        }
+        .watchlist-card-header .price-item,
+        .watchlist-card-header .pop-info {
+            padding: 5px 8px;
+            font-size: 0.85em;
+        }
+        .watchlist-card-header .external-links {
+            margin-top: 6px;
+        }
+        .listings-toggle {
+            padding: 8px 14px;
+            font-size: 0.85em;
+        }
+        .listing-row {
+            padding: 8px 14px;
+            font-size: 0.85em;
+        }
+        /* 删除按钮 */
+        .delete-card-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            border: 1px solid #5c2a3a;
+            background: #3d1520;
+            color: #c08090;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 2;
+            line-height: 1;
+        }
+        .delete-card-btn:hover {
+            background: #8b2535;
+            color: #fff;
+            border-color: #8b2535;
+        }
+        .watchlist-card {
+            position: relative;
+        }
+
+        /* 新增卡牌弹窗 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal {
+            background: #1e1215;
+            border: 1px solid #5c2a3a;
+            border-radius: 16px;
+            padding: 30px;
+            width: 500px;
+            max-width: 90vw;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+        }
+        .modal h2 {
+            color: #e8cdd3;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+        }
+        .modal label {
+            display: block;
+            color: #c08090;
+            font-size: 0.85em;
+            margin-bottom: 4px;
+            margin-top: 12px;
+        }
+        .modal input, .modal select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #4a2530;
+            border-radius: 8px;
+            background: #2a1520;
+            color: #e8cdd3;
+            font-size: 14px;
+        }
+        .modal input::placeholder {
+            color: #6a4a55;
+        }
+        .modal input:focus, .modal select:focus {
+            outline: none;
+            border-color: #8b4050;
+        }
+        .modal-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+        .modal-actions .btn {
+            flex: 1;
+            padding: 12px;
+            font-size: 14px;
+        }
+        .btn-cancel {
+            background: #3d1520 !important;
+            border: 1px solid #5c2a3a !important;
+        }
+        .btn-cancel:hover {
+            background: #5c2535 !important;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                padding: 20px;
+            }
+            #myWatchlist {
+                grid-template-columns: 1fr;
+            }
+            .search-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .search-input {
+                min-width: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container pirate-theme">
+        <div class="header">
+            <h1><svg width="40" height="40" viewBox="0 0 40 40" style="vertical-align:middle;margin-right:8px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5))"><defs><linearGradient id="gb" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#e8c44a"/><stop offset="100%" stop-color="#b8941a"/></linearGradient></defs><rect x="1" y="1" width="38" height="38" rx="5" fill="#1a3a6a" stroke="url(#gb)" stroke-width="2"/><circle cx="20" cy="20" r="12" fill="none" stroke="#e8c44a" stroke-width="2"/><line x1="8" y1="20" x2="32" y2="20" stroke="#e8c44a" stroke-width="2"/><circle cx="20" cy="20" r="4" fill="#1a3a6a" stroke="#e8c44a" stroke-width="2"/><circle cx="20" cy="20" r="1.5" fill="#e8c44a"/></svg>TCG卡牌全球市场监控</h1>
+            <p>实时追踪卡牌价格、排名与新品上架动态</p>
+            <div style="margin-top:8px;font-size:0.8em;opacity:0.8;">
+                <span id="syncIndicator" style="cursor:pointer;" onclick="manualSync()" title="点击手动同步">☁️ 点击同步</span>
+                <span style="margin-left:8px;color:#5c4040;">|</span>
+                <span id="tokenSettings" style="cursor:pointer;margin-left:8px;" onclick="openTokenModal()" title="设置/更新GitHub Token">⚙️</span>
+            </div>
+        </div>
+
+        <div class="search-section">
+            <div class="search-container">
+                <input type="text" class="search-input" id="cardInput" placeholder="输入卡牌编号 (如: SWSH001, SV75, LOR-123)">
+                <button class="btn" onclick="searchCard()">🔍 搜索卡牌</button>
+                <button class="btn btn-secondary" onclick="addToMonitor()">➕ 添加到监控</button>
+                <button class="btn" onclick="refreshData()" title="从GitHub Gist云端拉取最新数据">☁️ 拉取云端</button>
+                <button class="btn btn-cancel" onclick="resetToDefault()" style="padding:15px 16px;font-size:12px;" title="重置为默认卡牌列表">↩ 重置</button>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="card full-width">
+                <div class="card-header">📊 市场概览</div>
+                <div class="card-body">
+                    <div class="market-stats">
+                        <div class="stat-card">
+                            <div class="stat-value" id="totalCards">0</div>
+                            <div class="stat-label">监控卡牌总数</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="newListings">0</div>
+                            <div class="stat-label">商品链接数</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="priceChanges">156</div>
+                            <div class="stat-label">价格变动</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="avgPrice">¥0</div>
+                            <div class="stat-label">监控总价值</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card full-width">
+                <div class="card-header">📋 我的监控清单</div>
+                <div class="card-body">
+                    <div class="card-list" id="myWatchlist">
+                        <!-- 动态加载监控清单（含每张卡的上架信息） -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">🏆 全球排名 TOP 10</div>
+                <div class="card-body">
+                    <div class="card-list" id="topRankings">
+                        <!-- 动态加载排名数据 -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">💰 热门卡牌价格</div>
+                <div class="card-body">
+                    <div class="card-list" id="hotPrices">
+                        <!-- 动态加载价格数据 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新增卡牌弹窗 -->
+    <div class="modal-overlay" id="addCardModal">
+        <div class="modal">
+            <h2>➕ 添加新卡牌到监控</h2>
+            <div style="background:#2a1a20;border:1px dashed #5c2a3a;border-radius:10px;padding:14px;margin-bottom:16px;">
+                <label style="margin-top:0;color:#c9a84c;font-weight:600;">🔗 粘贴eBay链接快速添加</label>
+                <input type="text" id="ebayLinkInput" placeholder="粘贴eBay商品链接，自动提取信息..." style="margin-top:6px;">
+                <button class="btn" onclick="parseEbayLink()" style="margin-top:8px;padding:8px 16px;font-size:13px;width:100%;">解析链接</button>
+                <div id="parseStatus" style="color:#c9a84c;font-size:0.8em;margin-top:6px;min-height:1em;"></div>
+            </div>
+            <div style="text-align:center;color:#6a4a55;font-size:0.85em;margin-bottom:12px;">—— 或手动填写 ——</div>
+            <div class="modal-row">
+                <div>
+                    <label>卡牌编号 *</label>
+                    <input type="text" id="newCardId" placeholder="ST10-006">
+                </div>
+                <div>
+                    <label>卡牌名称 *</label>
+                    <input type="text" id="newCardName" placeholder="蒙奇·D·路飞">
+                </div>
+            </div>
+            <div class="modal-row">
+                <div>
+                    <label>稀有度</label>
+                    <input type="text" id="newCardRarity" placeholder="SR / SR异画" value="SR">
+                </div>
+                <div>
+                    <label>参考价格</label>
+                    <input type="text" id="newCardPrice" placeholder="$99 或 ¥680" value="">
+                </div>
+            </div>
+            <details style="margin-top:12px;">
+                <summary style="color:#8a6070;cursor:pointer;font-size:0.85em;">更多选项（英文名/评级/系列/卡图）</summary>
+                <label>英文名称</label>
+                <input type="text" id="newCardEnglishName" placeholder="Monkey.D.Luffy SR Alt Art">
+                <div class="modal-row">
+                    <div>
+                        <label>评级/品相</label>
+                        <input type="text" id="newCardGrade" placeholder="NM" value="NM">
+                    </div>
+                    <div>
+                        <label>系列</label>
+                        <input type="text" id="newCardSeries" placeholder="航海王">
+                    </div>
+                </div>
+                <label>卡图URL</label>
+                <input type="text" id="newCardImage" placeholder="留空显示占位图">
+                <label>eBay商品链接（作为监控链接保存）</label>
+                <input type="text" id="newCardEbayLink" placeholder="https://www.ebay.com/itm/...">
+            </details>
+            <div class="modal-actions">
+                <button class="btn btn-cancel" onclick="closeAddModal()">取消</button>
+                <button class="btn" onclick="confirmAddCard()">确认添加</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- GitHub Token 设置弹窗 -->
+    <div class="modal-overlay" id="tokenModal">
+        <div class="modal" style="max-width:450px;">
+            <h2>🔑 GitHub Token 设置</h2>
+            <p style="color:#8a6070;font-size:0.9em;margin-bottom:14px;">
+                用于同步数据到 GitHub Gist 云端。<br>
+                Token 只保存在浏览器本地，不会上传到任何服务器。
+            </p>
+            <label>GitHub Personal Access Token</label>
+            <input type="password" id="tokenInput" placeholder="ghp_..." style="font-family:monospace;font-size:13px;">
+            <div style="background:#2a1a20;border:1px dashed #5c2a3a;border-radius:8px;padding:12px;margin-top:12px;">
+                <p style="color:#c9a84c;font-size:0.82em;line-height:1.6;margin:0;">
+                    📌 获取方式：<br>
+                    1. 打开 <a href="https://github.com/settings/tokens/new?scopes=gist&description=TCG%20Sync" target="_blank" style="color:#6dba84;text-decoration:underline;" rel="noopener">github.com/settings/tokens/new</a><br>
+                    2. 勾选 <strong>gist</strong> 权限<br>
+                    3. 生成并复制 Token 粘贴到上方
+                </p>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-cancel" onclick="closeTokenModal()">取消</button>
+                <button class="btn" onclick="saveToken()">保存并同步</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 默认卡牌数据（首次加载使用）
+        const defaultCards = [
+            {
+                id: 'ONEPIECE-MAGAZINE-VOL4',
+                name: '蒙奇·D·路飞 杂志限定卡 Vol.4',
+                englishName: 'Monkey D. Luffy Magazine Limited Card Vol.4',
+                grade: 'NM',
+                series: '航海王杂志限定',
+                price: 680,
+                avgPrice: 680,
+                psa10Pop: 22344,
+                lastPrice: 0,
+                change: '+18%',
+                rarity: '杂志限定稀有',
+                platforms: ['ebay', '卡淘', '闲鱼', '日淘任意门', '集换社'],
+                image: 'https://storage.googleapis.com/images.pricecharting.com/wteeovqqpwg4q3yg/1600.jpg',
+                links: {
+                    ebay: 'https://www.ebay.com/sch/i.html?_nkw=One+Piece+Magazine+Luffy+ST21-014+SR+promo',
+                    kartao: 'https://www.cardhobby.com.cn/market?q=路飞+杂志+ST21-014',
+                    xianyu: 'https://www.goofish.com/search?q=航海王杂志限定路飞卡',
+                    doorzo: 'https://www.doorzo.cn/search?q=路飞+杂志限定',
+                    jihuanshe: 'https://www.jihuanshe.com/search?q=路飞+杂志限定+ST21-014'
+                },
+                sampleListings: [
+                    { platform: 'eBay', price: '$622.00', title: 'One Piece Magazine Shonen Jump Luffy Promo Cards Set Of 4', link: 'https://www.ebay.com/itm/286857390073', time: '在售(4张套)' },
+                    { platform: 'eBay', price: '$199.98', title: 'Monkey D. Luffy ST21-014 ONE PIECE Card Magazine Promo Japanese', link: 'https://www.ebay.com/itm/357703775580', time: '在售' },
+                    { platform: 'eBay(CA)', price: '$209.00', title: 'One Piece Monkey D. Luffy SR Magazine Promo ST21-014 PSA 10', link: 'https://www.ebay.ca/itm/206187580974', time: '已售' }
+                ],
+                priceMeta: {
+                    source: 'eBay参考价',
+                    lastUpdated: '2026-04-09',
+                    note: '杂志限定Vol.4路飞SR，基于eBay在售价估算'
+                }
+            },
+            {
+                id: '020/M-P',
+                name: '皮卡丘 2025麦当劳促销',
+                englishName: 'Pikachu 2025 McDonald Promotion',
+                grade: 'PSA 10',
+                series: '日本精灵宝可梦卡',
+                price: 530,
+                avgPrice: 530,
+                psa10Pop: 256117,
+                lastPrice: 0,
+                change: '-5%',
+                rarity: '促销限定',
+                platforms: ['ebay', '卡淘', '闲鱼', '日淘任意门', '集换社'],
+                image: 'https://i.ebayimg.com/images/g/h6wAAeSwvYxpBM3d/s-l400.jpg',
+                links: {
+                    ebay: 'https://www.ebay.com/sch/i.html?_nkw=Pikachu+020+M-P+McDonald+2025+PSA+10',
+                    kartao: 'https://www.cardhobby.com.cn/market?q=皮卡丘+020+麦当劳+PSA',
+                    xianyu: 'https://www.goofish.com/search?q=皮卡丘麦当劳2025+020+PSA10',
+                    doorzo: 'https://www.doorzo.cn/search?q=皮卡丘+麦当劳+020',
+                    jihuanshe: 'https://www.jihuanshe.com/search?q=皮卡丘+020+麦当劳'
+                },
+                sampleListings: [
+                    { platform: 'eBay', price: '$92.98', title: 'PSA 10 Pikachu 020/M-P McDonald\'s Happy Set Promo 2025', link: 'https://www.ebay.com/itm/406312465518', time: '在售' },
+                    { platform: 'eBay', price: '$67.00', title: 'PSA 10 Pikachu 020/M-P McDonald\'s 2025 (PSA官方)', link: 'https://www.ebay.com/itm/117113287942', time: '竞拍中(起拍价)' },
+                    { platform: '卡淘', price: '¥388', title: 'PSA10 皮卡丘2025麦当劳促销 020/M-P', link: 'https://www.cardhobby.com.cn/market/item/103259226', time: '在售' }
+                ],
+                priceMeta: {
+                    source: 'eBay+卡淘参考价',
+                    lastUpdated: '2026-04-09',
+                    note: '2025日本麦当劳促销皮卡丘PSA10，基于卡淘/eBay成交价'
+                }
+            },
+            {
+                id: 'smp2-025/024',
+                name: '吉田侦探SR 皮卡丘',
+                englishName: 'Lt. Yoshida SR Detective Pikachu',
+                grade: 'PSA 10',
+                series: '日文精灵宝可梦卡',
+                price: 2000,
+                avgPrice: 2000,
+                psa10Pop: 1223,
+                lastPrice: 0,
+                change: '+5%',
+                rarity: 'SR稀有',
+                platforms: ['ebay', '卡淘', '闲鱼', '日淘任意门', '集换社'],
+                image: 'https://storage.googleapis.com/images.pricecharting.com/deqkp2eadbnlt5aj/1600.jpg',
+                links: {
+                    ebay: 'https://www.ebay.com/sch/i.html?_nkw=Lt+Yoshida+025+024+smp2+Detective+Pikachu+PSA',
+                    kartao: 'https://www.cardhobby.com.cn/market?q=吉田+侦探皮卡丘+025',
+                    xianyu: 'https://www.goofish.com/search?q=吉田侦探SR+皮卡丘+smp2',
+                    doorzo: 'https://www.doorzo.cn/search?q=吉田+侦探+皮卡丘+025',
+                    jihuanshe: 'https://www.jihuanshe.com/search?q=吉田侦探+皮卡丘+smp2'
+                },
+                sampleListings: [
+                    { platform: 'eBay(UK)', price: '$195.00', title: 'PSA 10 GEM MINT JAPANESE POKEMON DETECTIVE YOSHIDA 025/024 SMP2', link: 'https://www.ebay.co.uk/itm/389315547489', time: '缺货' },
+                    { platform: 'eBay(AU)', price: 'AU$449.83', title: 'PSA 10 Pokemon TCG Lt. Yoshida 025/024 Smp2 Detective Pikachu', link: 'https://www.ebay.com.au/itm/397424746279', time: '已结束' }
+                ],
+                priceMeta: {
+                    source: 'eBay国际参考价',
+                    lastUpdated: '2026-04-09',
+                    note: '吉田侦探SR皮卡丘 smp2-025/024 PSA10，日文限定稀有卡'
+                }
+            },
+            {
+                id: '365/SM-P',
+                name: '装甲超梦',
+                englishName: 'Armored Mewtwo PROMO',
+                grade: 'PSA 10',
+                series: '宝可梦日版PROMO',
+                price: 4000,
+                avgPrice: 4000,
+                psa10Pop: 3805,
+                lastPrice: 0,
+                change: '+3%',
+                rarity: 'PROMO限定',
+                platforms: ['ebay', '卡淘', '闲鱼', '日淘任意门', '集换社'],
+                image: 'https://storage.googleapis.com/images.pricecharting.com/e3902e2686ce5e0ed02b59d8d1f873c4db33f0cfb1d155ad6f8d5fe96947174c/1600.jpg',
+                links: {
+                    ebay: 'https://www.ebay.com/sch/i.html?_nkw=Armored+Mewtwo+365+SM-P+PSA+10',
+                    kartao: 'https://www.cardhobby.com.cn/market?q=装甲超梦+365+SM-P',
+                    xianyu: 'https://www.goofish.com/search?q=装甲超梦+365+PSA',
+                    doorzo: 'https://www.doorzo.cn/search?q=装甲超梦+365',
+                    jihuanshe: 'https://www.jihuanshe.com/search?q=装甲超梦+365'
+                },
+                sampleListings: [
+                    { platform: 'eBay(AU)', price: '$799.98', title: 'PSA 10 Armored Mewtwo PROMO 365/SM-P Movie Limited Japanese', link: 'https://www.ebay.com.au/itm/146670988725', time: '在售(最后1件)' },
+                    { platform: 'eBay', price: '$390.00', title: 'Armored Mewtwo Promo PSA 10 Japanese SM-P 365 Strikes Back', link: 'https://www.ebay.com/itm/257186236106', time: '已售' }
+                ],
+                priceMeta: {
+                    source: 'eBay+PriceCharting参考价',
+                    lastUpdated: '2026-04-09',
+                    note: '装甲超梦 365/SM-P PROMO PSA10，剧场版限定超稀有'
+                }
+            },
+            {
+                id: 'ST21-014',
+                name: '航海王 SR异画 路飞',
+                englishName: 'One Piece ST21-014 SR Alternate Art Luffy',
+                grade: 'NM',
+                series: '航海王杂志限定',
+                price: 200,
+                avgPrice: 200,
+                psa10Pop: 22344,
+                lastPrice: 0,
+                change: '+8%',
+                rarity: 'SR异画',
+                platforms: ['ebay', '卡淘', '闲鱼', '日淘任意门', '集换社'],
+                image: 'https://storage.googleapis.com/images.pricecharting.com/wteeovqqpwg4q3yg/1600.jpg',
+                links: {
+                    ebay: 'https://www.ebay.com/sch/i.html?_nkw=One+Piece+ST21-014+SR+Luffy+alternate+art',
+                    kartao: 'https://www.cardhobby.com.cn/market?q=航海王+ST21-014+SR',
+                    xianyu: 'https://www.goofish.com/search?q=航海王+ST21-014+SR异画',
+                    doorzo: 'https://www.doorzo.cn/search?q=ST21-014+路飞',
+                    jihuanshe: 'https://www.jihuanshe.com/search?q=ST21-014+SR'
+                },
+                sampleListings: [
+                    { platform: 'eBay', price: '$199.98', title: 'Monkey D. Luffy ST21-014 ONE PIECE Card Magazine Promo Japanese', link: 'https://www.ebay.com/itm/357703775580', time: '在售' },
+                    { platform: 'eBay(CA)', price: '$209.00', title: 'One Piece Monkey D. Luffy SR Magazine Promo ST21-014 PSA 10', link: 'https://www.ebay.ca/itm/206187580974', time: '已售' }
+                ],
+                priceMeta: {
+                    source: 'eBay参考价',
+                    lastUpdated: '2026-04-09',
+                    note: '航海王杂志限定ST21-014 SR异画路飞'
+                }
+            },
+            {
+                id: 'PRB02-005',
+                name: '蒙奇·D·路飞 红牛双DON',
+                englishName: 'Monkey.D.Luffy Red Bull Double Don',
+                grade: 'NM',
+                series: '红牛活动限定',
+                price: 720,
+                avgPrice: 720,
+                psa10Pop: 'N/A',
+                lastPrice: 0,
+                change: '+15%',
+                rarity: '活动限定',
+                platforms: ['ebay', '卡淘', '闲鱼', '日淘任意门', '集换社'],
+                image: 'https://storage.googleapis.com/images.pricecharting.com/atkda62cvnyvtfnf/1600.jpg',
+                links: {
+                    ebay: 'https://www.ebay.com/sch/i.html?_nkw=Luffy+PRB02-005+Red+Bull+Double+Don',
+                    kartao: 'https://www.cardhobby.com.cn/market?q=路飞+红牛+PRB02-005',
+                    xianyu: 'https://www.goofish.com/search?q=路飞+红牛双DON+PRB02',
+                    doorzo: 'https://www.doorzo.cn/search?q=路飞+红牛+PRB02',
+                    jihuanshe: 'https://www.jihuanshe.com/search?q=路飞+红牛+PRB02-005'
+                },
+                sampleListings: [
+                    { platform: 'eBay', price: '$170.50', title: 'Monkey.D.Luffy (PRB02-005) Red Bull Double Don!! Promo non foil', link: 'https://www.ebay.com/itm/277788859888', time: '已售(21次竞拍)' },
+                    { platform: 'eBay(CA)', price: '$2,349.00', title: 'MONKEY D LUFFY RED BULL X ONE PIECE PRB02-005 + DOUBLE DON Set', link: 'https://www.ebay.ca/itm/397609219415', time: '已售(含DON套装)' }
+                ],
+                priceMeta: {
+                    source: 'eBay成交记录参考',
+                    lastUpdated: '2026-04-09',
+                    note: '红牛双DON联动 路飞 PRB02-005，活动限定卡'
+                }
+            },
+            {
+                id: 'REDBULL-EXCLUSIVE',
+                name: '红牛双DON独家红章促销卡',
+                englishName: 'Red Bull Double DON Exclusive Red Stamp Promo',
+                grade: 'NM',
+                series: '航海王红牛独占',
+                price: 550,
+                avgPrice: 550,
+                psa10Pop: 'N/A',
+                lastPrice: 0,
+                change: '+22%',
+                rarity: '红牛独占',
+                platforms: ['ebay', '卡淘', '闲鱼', '日淘任意门', '集换社'],
+                image: 'https://i.ebayimg.com/images/g/eDIAAeSwKuhp0rug/s-l400.jpg',
+                links: {
+                    ebay: 'https://www.ebay.com/sch/i.html?_nkw=Red+Bull+Double+DON+Exclusive+Red+Stamp+One+Piece',
+                    kartao: 'https://www.cardhobby.com.cn/market?q=红牛+双DON+独占+红章',
+                    xianyu: 'https://www.goofish.com/search?q=红牛双DON独占红章卡',
+                    doorzo: 'https://www.doorzo.cn/search?q=Red+Bull+DON+exclusive',
+                    jihuanshe: 'https://www.jihuanshe.com/search?q=红牛+双DON+红章'
+                },
+                sampleListings: [
+                    { platform: 'eBay', price: '$250.00', title: 'Red Bull Double DON!! Exclusive Red Stamped Promo Card One Piece', link: 'https://www.ebay.com/itm/157803624050', time: '在售' },
+                    { platform: 'eBay', price: '$76.00', title: 'Red Bull Double DON!! Exclusive Red Stamped Promo Card (竞拍)', link: 'https://www.ebay.com/itm/137199788303', time: '已售(28次竞拍)' }
+                ],
+                priceMeta: {
+                    source: 'eBay成交记录参考',
+                    lastUpdated: '2026-04-09',
+                    note: '红牛双DON独家红章促销卡，极稀有活动限定'
+                }
+            },
+            {
+                id: '113/101',
+                name: '吉利蛋 Art Rare (变身面具)',
+                englishName: 'Chansey 113/101 Sv6 Transformation Mask',
+                grade: 'PSA 10',
+                series: 'SV6 变身面具',
+                price: 567,
+                avgPrice: 567,
+                psa10Pop: 3914,
+                lastPrice: 0,
+                change: '新增',
+                rarity: 'Art Rare',
+                platforms: ['ebay', '卡淘', '闲鱼', '日淘任意门', '集换社'],
+                image: 'https://i.ebayimg.com/images/g/5f8AAeSwkaZppSpd/s-l400.jpg',
+                links: {
+                    ebay: 'https://www.ebay.com/sch/i.html?_nkw=Chansey+113+101+Sv6+PSA+10',
+                    kartao: 'https://www.cardhobby.com.cn/market?q=吉利蛋+113+变身面具',
+                    xianyu: 'https://www.goofish.com/search?q=吉利蛋+变身面具+AR+PSA',
+                    doorzo: 'https://www.doorzo.cn/search?q=Chansey+113+101+SV6',
+                    jihuanshe: 'https://www.jihuanshe.com/search?q=吉利蛋+113+AR'
+                },
+                sampleListings: [
+                    { platform: 'eBay', price: '$78.00', title: 'PSA10 Chansey 113/101 Sv6 Transformation Mask Holo Japanese', link: 'https://www.ebay.com/itm/397359509124', time: '在售(最后1件)' }
+                ]
+            }
+        ];
+
+        // === 数据同步配置 ===
+        const GIST_ID = '6abe8214c077c6ac0c87b17b41436ed2';
+        const GIST_FILE = 'tcg-cards.json';
+        const STORAGE_KEY = 'tcg_monitor_cards';
+        const TOKEN_KEY = 'github_token'; // Token存储在localStorage中
+        let userCards;
+        let syncStatus = ''; // 同步状态
+
+        // 获取Token（仅从localStorage读取，不在源码中硬编码）
+        function getToken() {
+            return localStorage.getItem(TOKEN_KEY) || '';
+        }
+
+        // 设置Token
+        function setToken(token) {
+            if (token && token.trim()) {
+                localStorage.setItem(TOKEN_KEY, token.trim());
+                return true;
+            }
+            return false;
+        }
+
+        // 初始化：先用localStorage快速加载，再从Gist拉取最新
+        try {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            userCards = saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(defaultCards));
+        } catch(e) {
+            userCards = JSON.parse(JSON.stringify(defaultCards));
+        }
+
+        // 保存到localStorage + Gist云端
+        function saveCards() {
+            // 1. 先存localStorage（即时）
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(userCards));
+            } catch(e) {}
+            // 2. 异步推送到Gist
+            pushToGist();
+        }
+
+        // 推送数据到Gist
+        async function pushToGist() {
+            const token = getToken();
+            if (!token) {
+                updateSyncIcon('notoken');
+                return;
+            }
+            updateSyncIcon('syncing');
+            try {
+                const resp = await fetch('https://api.github.com/gists/' + GIST_ID, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': 'token ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        files: {
+                            [GIST_FILE]: {
+                                content: JSON.stringify(userCards, null, 2)
+                            }
+                        }
+                    })
+                });
+                if (resp.ok) {
+                    updateSyncIcon('ok');
+                } else if (resp.status === 401 || resp.status === 403) {
+                    updateSyncIcon('auth_error');
+                } else {
+                    updateSyncIcon('error');
+                    console.warn('Gist推送失败:', resp.status);
+                }
+            } catch(e) {
+                updateSyncIcon('error');
+                console.warn('Gist推送异常:', e);
+            }
+        }
+
+        // 从Gist拉取数据
+        async function pullFromGist() {
+            const token = getToken();
+            if (!token) {
+                updateSyncIcon('notoken');
+                return;
+            }
+            updateSyncIcon('syncing');
+            try {
+                const resp = await fetch('https://api.github.com/gists/' + GIST_ID, {
+                    headers: {
+                        'Authorization': 'token ' + token,
+                        'Accept': 'application/vnd.github.v3+json'
+                    },
+                    cache: 'no-store'
+                });
+                if (resp.status === 401 || resp.status === 403) {
+                    updateSyncIcon('auth_error');
+                    return;
+                }
+                if (!resp.ok) { updateSyncIcon('error'); return; }
+                const gist = await resp.json();
+                const file = gist.files[GIST_FILE];
+                if (!file) { updateSyncIcon('error'); return; }
+                
+                let data;
+                try {
+                    data = JSON.parse(file.content);
+                } catch(e) {
+                    console.warn('Gist内容解析失败:', e);
+                    updateSyncIcon('error');
+                    return;
+                }
+
+                // 兼容两种格式：纯数组 或 包含initialized标记的对象
+                if (Array.isArray(data)) {
+                    if (data.length > 0) {
+                        userCards.length = 0;
+                        data.forEach(c => userCards.push(c));
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(userCards));
+                        initPage();
+                        updateSyncIcon('ok');
+                    } else {
+                        // 空数组，推送本地数据
+                        await pushToGist();
+                    }
+                } else if (data && data.initialized === false) {
+                    // Gist还是空的（初始化占位），把本地数据推上去
+                    await pushToGist();
+                } else if (data && Array.isArray(data.cards)) {
+                    // 对象包裹格式: { cards: [...], initialized: true }
+                    userCards.length = 0;
+                    data.cards.forEach(c => userCards.push(c));
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(userCards));
+                    initPage();
+                    updateSyncIcon('ok');
+                } else {
+                    // 无法识别的格式，保持本地数据不变
+                    console.warn('Gist数据格式无法识别:', typeof data);
+                    updateSyncIcon('error');
+                }
+            } catch(e) {
+                updateSyncIcon('error');
+                console.warn('Gist拉取异常:', e);
+            }
+        }
+
+        // 更新同步状态图标
+        function updateSyncIcon(status) {
+            const el = document.getElementById('syncIndicator');
+            if (!el) return;
+            if (status === 'syncing') {
+                el.innerHTML = '🔄 同步中...';
+                el.style.color = '#c9a84c';
+                el.style.cursor = 'wait';
+            } else if (status === 'ok') {
+                el.innerHTML = '☁️ 已同步';
+                el.style.color = '#6dba82';
+                el.style.cursor = 'pointer';
+                setTimeout(() => { el.innerHTML = '☁️ 点击同步'; el.style.color = '#8a6070'; }, 3000);
+            } else if (status === 'notoken') {
+                el.innerHTML = '⚠️ 未设置Token';
+                el.style.color = '#e07070';
+                el.style.cursor = 'pointer';
+                el.title = '点击设置GitHub Token';
+                el.onclick = openTokenModal;
+            } else if (status === 'auth_error') {
+                el.innerHTML = '❌ Token失效';
+                el.style.color = '#e07070';
+                el.style.cursor = 'pointer';
+                el.title = 'Token已过期，点击更新';
+                el.onclick = openTokenModal;
+            } else {
+                el.innerHTML = '⚠️ 同步失败';
+                el.style.color = '#e07070';
+                el.style.cursor = 'pointer';
+            }
+        }
+
+        // 手动同步按钮
+        function manualSync() {
+            const token = getToken();
+            if (!token) {
+                openTokenModal();
+                return;
+            }
+            pullFromGist();
+        }
+
+        // 打开Token设置弹窗
+        function openTokenModal() {
+            const modal = document.getElementById('tokenModal');
+            if (!modal) return;
+            document.getElementById('tokenInput').value = getToken();
+            modal.classList.add('active');
+            setTimeout(() => document.getElementById('tokenInput').focus(), 100);
+        }
+
+        // 关闭Token弹窗
+        function closeTokenModal() {
+            const modal = document.getElementById('tokenModal');
+            if (modal) modal.classList.remove('active');
+        }
+
+        // 保存Token
+        function saveToken() {
+            const token = document.getElementById('tokenInput').value.trim();
+            if (!token) {
+                alert('请输入GitHub Token');
+                return;
+            }
+            if (setToken(token)) {
+                closeTokenModal();
+                alert('✅ Token已保存！\n\n正在尝试同步...');
+                pullFromGist();
+            }
+        }
+
+        // 重置为默认数据
+        function resetToDefault() {
+            if (confirm('确定要重置监控清单为初始默认数据吗？\n所有手动添加的卡牌和链接将丢失。')) {
+                userCards.length = 0;
+                defaultCards.forEach(c => userCards.push(JSON.parse(JSON.stringify(c))));
+                saveCards();
+                initPage();
+                alert('已重置为默认数据');
+            }
+        }
+
+        // 全球热门卡牌（保留作为参考）
+        const popularCards = [
+            { id: 'SWSH001', name: '皮卡丘 VMAX', price: 1280, rank: 1, change: '+5%' },
+            { id: 'SV75', name: '喷火龙 ex', price: 980, rank: 2, change: '-2%' },
+            { id: 'LOR-123', name: '苍响 VSTAR', price: 756, rank: 3, change: '+12%' }
+        ];
+
+        const mockNewListings = [
+            { id: 'NEW001', name: '莉莉艾的全新收藏', price: 1680, platform: '日本雅虎拍卖', time: '2分钟前', region: 'JP' },
+            { id: 'NEW002', name: '初代御三家套装', price: 890, platform: 'eBay', time: '5分钟前', region: 'US' },
+            { id: 'NEW003', name: '竞技场限定卡组', price: 450, platform: 'TCGPlayer', time: '8分钟前', region: 'US' },
+            { id: 'NEW004', name: '日版隐藏稀有卡', price: 2100, platform: 'Mercari', time: '12分钟前', region: 'JP' },
+            { id: 'NEW005', name: '特殊艺术版本', price: 3200, platform: 'Heritage Auctions', time: '15分钟前', region: 'US' }
+        ];
+
+        // 初始化页面
+        function initPage() {
+            renderTopRankings();
+            renderHotPrices();
+            renderWatchlist();
+            updateStats();
+        }
+        
+        // 首次加载时从Gist拉取（异步，不阻塞渲染）
+        function initSync() {
+            initPage(); // 先用本地数据渲染
+            pullFromGist(); // 再异步拉取云端最新
+        }
+
+        // 格式化POP数字
+        function formatPop(pop) {
+            if (pop === 'N/A' || pop === null || pop === undefined) return 'N/A';
+            return typeof pop === 'number' ? pop.toLocaleString() : pop;
+        }
+
+        // 汇率表（近似值，可定期更新）
+        const exchangeRates = {
+            '$': 7.27,      // USD → CNY
+            'AU$': 4.72,    // AUD → CNY
+            'CA$': 5.28,    // CAD → CNY
+            '£': 9.35,      // GBP → CNY
+            '€': 7.92,      // EUR → CNY
+        };
+
+        // 解析价格字符串并换算成人民币
+        function convertToCNY(priceStr) {
+            if (!priceStr) return priceStr;
+            // 已经是人民币则直接返回
+            if (priceStr.startsWith('¥')) return priceStr;
+
+            // 尝试匹配各种货币符号
+            let symbol = '';
+            let numStr = '';
+
+            if (priceStr.startsWith('AU$')) {
+                symbol = 'AU$';
+                numStr = priceStr.replace('AU$', '').replace(/,/g, '').trim();
+            } else if (priceStr.startsWith('CA$')) {
+                symbol = 'CA$';
+                numStr = priceStr.replace('CA$', '').replace(/,/g, '').trim();
+            } else if (priceStr.startsWith('$')) {
+                symbol = '$';
+                numStr = priceStr.replace('$', '').replace(/,/g, '').trim();
+            } else if (priceStr.startsWith('£')) {
+                symbol = '£';
+                numStr = priceStr.replace('£', '').replace(/,/g, '').trim();
+            } else if (priceStr.startsWith('€')) {
+                symbol = '€';
+                numStr = priceStr.replace('€', '').replace(/,/g, '').trim();
+            } else {
+                return priceStr; // 无法识别的货币
+            }
+
+            const num = parseFloat(numStr);
+            if (isNaN(num)) return priceStr;
+
+            const rate = exchangeRates[symbol];
+            if (!rate) return priceStr;
+
+            const cny = Math.round(num * rate);
+            return priceStr + ' <span style="color:#c9a84c;font-size:0.85em;">(≈¥' + cny.toLocaleString() + ')</span>';
+        }
+
+        // 切换上架商品展开/收起
+        function toggleListings(cardId) {
+            const section = document.getElementById('listings-' + cardId);
+            const toggle = document.getElementById('toggle-' + cardId);
+            if (section && toggle) {
+                section.classList.toggle('open');
+                toggle.classList.toggle('open');
+            }
+        }
+
+        // 渲染TOP排名（增强版）
+        function renderTopRankings() {
+            const container = document.getElementById('topRankings');
+            container.innerHTML = userCards.map((card, index) => `
+                <div class="card-item">
+                    <div class="card-display">
+                        <img src="${card.image}" alt="${card.name}" class="card-image" onerror="this.src='data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"80\" height=\"112\" viewBox=\"0 0 80 112\"><rect width=\"80\" height=\"112\" fill=\"%23f0f0f0\"/><text x=\"40\" y=\"56\" text-anchor=\"middle\" fill=\"%23666\" font-size=\"10\">${card.name.substring(0,8)}</text></svg>'">
+                        <div class="card-details">
+                            <div class="card-name">${card.name}</div>
+                            <div class="card-number">${card.id} | ${card.grade}</div>
+                            <div class="price-info">
+                                <div class="price-item">现价: <strong style="color:#6dba82;">¥${(card.price || 0).toLocaleString()}</strong></div>
+                                <div class="pop-info">POP: ${formatPop(card.psa10Pop)} | ${card.change || '—'}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="rank-badge">#${index + 1}</div>
+                    <button onclick="openPriceEditor(${index})" style="padding:3px 8px;border:1px solid #5c2a3a;border-radius:8px;background:#2a1520;color:#c9a84c;font-size:0.72em;cursor:pointer;" title="编辑价格">✏️</button>
+                </div>
+            `).join('');
+        }
+
+        // 渲染热门价格（增强版显示卡图和信息）
+        function renderHotPrices() {
+            const container = document.getElementById('hotPrices');
+            container.innerHTML = userCards.map((card, index) => `
+                <div class="card-item" style="position:relative;">
+                    <button onclick="openPriceEditor(${index})" style="position:absolute;top:8px;right:8px;padding:3px 8px;border:1px solid #5c2a3a;border-radius:10px;background:#2a1520;color:#c9a84c;font-size:0.7em;cursor:pointer;z-index:2;" title="编辑价格">✏️</button>
+                    <div class="card-display">
+                        <img src="${card.image}" alt="${card.name}" class="card-image" onerror="this.src='data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"120\" height=\"168\" viewBox=\"0 0 120 168\"><rect width=\"120\" height=\"168\" fill=\"%23f0f0f0\" stroke=\"%23ccc\" stroke-width=\"2\"/><text x=\"60\" y=\"84\" text-anchor=\"middle\" fill=\"%23666\" font-size=\"12\">${card.name.substring(0,10)}</text></svg>'">
+                        <div class="card-details">
+                            <div class="card-name">${card.name} <span class="new-badge">监控中</span></div>
+                            <div class="card-number">${card.id} | ${card.grade}</div>
+                            <div class="price-info">
+                                <div class="price-item">现价: <strong style="color:#6dba82;">¥${(card.price || 0).toLocaleString()}</strong> (${card.change || '—'})</div>
+                                <div class="price-item">均价: ¥${(card.avgPrice || 0).toLocaleString()}</div>
+                                <div class="pop-info">PSA10 POP: ${formatPop(card.psa10Pop)}</div>
+                            </div>
+                            ${(card.priceMeta && card.priceMeta.lastUpdated) ? `<div style="font-size:0.78em;color:#7a5565;margin-top:2px;">🕐 ${card.priceMeta.lastUpdated}</div>` : ''}
+                            <div class="external-links">
+                                <a href="${card.links.ebay}" target="_blank" class="link-btn">eBay</a>
+                                <a href="${card.links.kartao}" target="_blank" class="link-btn">卡淘</a>
+                                <a href="${card.links.jihuanshe}" target="_blank" class="link-btn">集换社</a>
+                                <a href="${card.links.xianyu}" target="_blank" class="link-btn">闲鱼</a>
+                                <a href="${card.links.doorzo}" target="_blank" class="link-btn">日淘任意门</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 渲染监控清单（含每张卡的上架商品信息）
+        function renderWatchlist() {
+            const container = document.getElementById('myWatchlist');
+            
+            if (userCards.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #8a6070; padding: 40px; grid-column: 1/-1;">暂无监控卡牌，请通过搜索添加</p>';
+                return;
+            }
+            
+            container.innerHTML = userCards.map((card, index) => {
+                const safeId = card.id.replace(/[^a-zA-Z0-9]/g, '_');
+                const listingsCount = card.sampleListings ? card.sampleListings.length : 0;
+                
+                const listingsHTML = card.sampleListings ? card.sampleListings.map(listing => `
+                    <div class="listing-row">
+                        <span class="platform-tag">${listing.platform}</span>
+                        <a href="${listing.link}" target="_blank" class="listing-title">${listing.title}</a>
+                        <span class="listing-price">${convertToCNY(listing.price)}</span>
+                        <span class="listing-time">${listing.time}</span>
+                    </div>
+                `).join('') : '';
+                
+                return `
+                <div class="watchlist-card">
+                    <button class="delete-card-btn" onclick="deleteCard(${index})" title="删除此卡牌">✕</button>
+                    <div class="watchlist-card-header">
+                        <img src="${card.image}" alt="${card.name}" class="card-image" onerror="this.src='data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"90\" height=\"126\" viewBox=\"0 0 90 126\"><rect width=\"90\" height=\"126\" fill=\"%231e1215\" stroke=\"%234a2530\" stroke-width=\"2\" rx=\"6\"/><text x=\"45\" y=\"63\" text-anchor=\"middle\" fill=\"%238a6070\" font-size=\"10\">${card.name.substring(0,6)}</text></svg>'">
+                        <div class="card-details" style="flex:1;">
+                            <div style="display:flex;align-items:center;justify-content:space-between;">
+                                <div>
+                                    <span class="card-name">${card.name} </span><span class="new-badge">监控中</span>
+                                </div>
+                                <button onclick="openPriceEditor(${index})" title="编辑价格信息" style="padding:4px 10px;border:1px solid #5c2a3a;border-radius:12px;background:#2a1520;color:#c9a84c;font-size:0.75em;cursor:pointer;">✏️ 编辑价格</button>
+                            </div>
+                            <div class="card-number">${card.id} | ${card.grade} | ${card.rarity}</div>
+                            <div class="price-info">
+                                <div class="price-item">现价: <strong style="color:#6dba82;">¥${(card.price || 0).toLocaleString()}</strong> (${card.change || '—'})</div>
+                                <div class="price-item">均价: ¥${(card.avgPrice || 0).toLocaleString()}</div>
+                                <div class="pop-info">PSA10 POP: ${formatPop(card.psa10Pop)}</div>
+                            </div>
+                            ${(card.priceMeta && (card.priceMeta.source || card.priceMeta.lastUpdated)) ? `
+                            <div style="margin-top:4px;font-size:0.78em;color:#7a5565;display:flex;align-items:center;gap:6px;">
+                                ${card.priceMeta.source ? '<span>📌 ' + card.priceMeta.source + '</span>' : ''}
+                                ${card.priceMeta.lastUpdated ? '<span>🕐 ' + card.priceMeta.lastUpdated + ' 更新</span>' : ''}
+                            </div>` : ''}
+                            <div class="external-links">
+                                <a href="${card.links.ebay}" target="_blank" class="link-btn">eBay</a>
+                                <a href="${card.links.kartao}" target="_blank" class="link-btn">卡淘</a>
+                                <a href="${card.links.jihuanshe}" target="_blank" class="link-btn">集换社</a>
+                                <a href="${card.links.xianyu}" target="_blank" class="link-btn">闲鱼</a>
+                                <a href="${card.links.doorzo}" target="_blank" class="link-btn">日淘任意门</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="listings-toggle" id="toggle-${safeId}" onclick="toggleListings('${safeId}')">
+                        <span>🚨 上架监控 (${listingsCount})</span>
+                        <span class="arrow">▼</span>
+                    </div>
+                    <div class="listings-section" id="listings-${safeId}">
+                        ${listingsHTML}
+                        <div class="add-link-row" style="padding:10px 14px;border-top:1px solid #2a1520;display:flex;gap:8px;align-items:center;">
+                            <input type="text" id="addlink-${safeId}" placeholder="粘贴eBay/卡淘等商品链接..." style="flex:1;padding:7px 10px;border:1px solid #4a2530;border-radius:6px;background:#2a1520;color:#e8cdd3;font-size:0.85em;">
+                            <input type="text" id="addprice-${safeId}" placeholder="价格如$99" style="width:90px;padding:7px 10px;border:1px solid #4a2530;border-radius:6px;background:#2a1520;color:#e8cdd3;font-size:0.85em;">
+                            <button onclick="addListingToCard(${index},'${safeId}')" style="padding:7px 12px;border:none;border-radius:6px;background:#5c2535;color:#e8cdd3;cursor:pointer;font-size:0.85em;white-space:nowrap;">+ 添加</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            }).join('');
+        }
+
+        // 删除卡牌
+        function deleteCard(index) {
+            const card = userCards[index];
+            if (!card) return;
+            if (confirm('确定要从监控清单中删除「' + card.name + '」吗？')) {
+                userCards.splice(index, 1);
+                saveCards();
+                renderWatchlist();
+                renderTopRankings();
+                renderHotPrices();
+                updateStats();
+            }
+        }
+
+        // 给已有卡牌添加商品链接
+        function addListingToCard(cardIndex, safeId) {
+            const card = userCards[cardIndex];
+            if (!card) return;
+            
+            const linkInput = document.getElementById('addlink-' + safeId);
+            const priceInput = document.getElementById('addprice-' + safeId);
+            const link = linkInput.value.trim();
+            const price = priceInput.value.trim();
+            
+            if (!link) { alert('请粘贴商品链接'); return; }
+            
+            // 自动识别平台
+            let platform = '其他';
+            if (link.includes('ebay.com.au')) platform = 'eBay(AU)';
+            else if (link.includes('ebay.co.uk')) platform = 'eBay(UK)';
+            else if (link.includes('ebay.ca')) platform = 'eBay(CA)';
+            else if (link.includes('ebay.com.hk')) platform = 'eBay(HK)';
+            else if (link.includes('ebay')) platform = 'eBay';
+            else if (link.includes('cardhobby') || link.includes('katafan')) platform = '卡淘';
+            else if (link.includes('goofish') || link.includes('taobao') || link.includes('xianyu')) platform = '闲鱼';
+            else if (link.includes('doorzo')) platform = '日淘任意门';
+            else if (link.includes('jihuanshe')) platform = '集换社';
+            else if (link.includes('mercari')) platform = 'Mercari';
+            else if (link.includes('tcgplayer')) platform = 'TCGPlayer';
+            
+            // 从URL提取标题
+            let title = card.englishName + ' ' + card.id;
+            const pathMatch = link.match(/\/itm\/([^\/\?]+)/);
+            if (pathMatch && pathMatch[1] && isNaN(pathMatch[1])) {
+                title = decodeURIComponent(pathMatch[1]).replace(/-/g, ' ').substring(0, 60);
+            }
+            
+            // 获取当前时间
+            const now = new Date();
+            const timeStr = (now.getMonth()+1) + '/' + now.getDate() + ' ' + now.getHours() + ':' + String(now.getMinutes()).padStart(2,'0') + ' 添加';
+            
+            if (!card.sampleListings) card.sampleListings = [];
+            card.sampleListings.push({
+                platform: platform,
+                price: price || '价格待查',
+                title: title,
+                link: link,
+                time: timeStr
+            });
+            
+            // 重新渲染并保存
+            saveCards();
+            renderWatchlist();
+        }
+
+        // 更新统计数据（真实数据）
+        function updateStats() {
+            const monitoredCount = userCards.length;
+            
+            // 统计商品链接总数（真实的在售/已售记录）
+            let listingsTotal = 0;
+            userCards.forEach(card => {
+                if (card.sampleListings) listingsTotal += card.sampleListings.length;
+            });
+            
+            // 有价格变动的卡数（change不为0%或持平的）
+            const priceChangeCount = userCards.filter(card => 
+                card.change && card.change !== '0%' && card.change !== '新增'
+            ).length;
+
+            // 计算总价值
+            const prices = userCards.map(card => card.price).filter(p => p > 0);
+            const avgPrice = prices.length > 0 ? Math.floor(prices.reduce((a, b) => a + b, 0) / prices.length) : 0;
+            const totalValue = prices.reduce((a, b) => a + b, 0);
+            
+            document.getElementById('totalCards').textContent = monitoredCount;
+            document.getElementById('newListings').textContent = listingsTotal;
+            document.getElementById('priceChanges').textContent = priceChangeCount;
+            document.getElementById('avgPrice').textContent = totalValue > 0 ? '¥' + totalValue.toLocaleString() : '¥0';
+        }
+
+        // 搜索卡牌（增强版显示详细信息）
+        function searchCard() {
+            const input = document.getElementById('cardInput');
+            const searchTerm = input.value.trim();
+            
+            if (!searchTerm) {
+                alert('请输入卡牌编号或名称');
+                return;
+            }
+            
+            // 在用户卡牌中搜索
+            let foundCard = null;
+            for (let card of userCards) {
+                if (card.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                    card.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    card.englishName.toLowerCase().includes(searchTerm.toLowerCase())) {
+                    foundCard = card;
+                    break;
+                }
+            }
+            
+            if (foundCard) {
+                // 创建详细的搜索结果弹窗
+                const resultWindow = window.open('', '_blank', 'width=600,height=700');
+                resultWindow.document.write( `
+                    <html>
+                    <head><title>${foundCard.name} - 搜索结果</title></head>
+                    <body style="font-family: Arial; padding: 20px;">
+                        <h2>${foundCard.name}</h2>
+                        <p><strong>英文名称:</strong> ${foundCard.englishName}</p>
+                        <p><strong>编号:</strong> ${foundCard.id}</p>
+                        <p><strong>评级:</strong> ${foundCard.grade}</p>
+                        <p><strong>系列:</strong> ${foundCard.series}</p>
+                        <p><strong>稀有度:</strong> ${foundCard.rarity}</p>
+                        
+                        <div class="card-display" style="display: flex; align-items: center; gap: 20px; margin: 20px 0;">
+                            <img src="${foundCard.image}" alt="${foundCard.name}" style="width: 200px; height: 280px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);" onerror="this.src='data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"200\" height=\"280\" viewBox=\"0 0 200 280\"><rect width=\"200\" height=\"280\" fill=\"%23f0f0f0\" stroke=\"%23ccc\" stroke-width=\"2\"/><text x=\"100\" y=\"140\" text-anchor=\"middle\" fill=\"%23666\" font-size=\"14\">${foundCard.name}</text></svg>'">
+                            <div>
+                                <div class="price-info" style="margin: 10px 0;">
+                                    <div style="background: #f8f9fa; padding: 8px; border-radius: 5px; margin: 5px 0;">
+                                        <strong>全球均价:</strong> ¥${foundCard.avgPrice}
+                                    </div>
+                                    <div style="background: #fff3cd; padding: 8px; border-radius: 5px; margin: 5px 0;">
+                                        <strong>PSA10 POP:</strong> ${formatPop(foundCard.psa10Pop)}
+                                    </div>
+                                    <div style="background: #f8f9fa; padding: 8px; border-radius: 5px; margin: 5px 0;">
+                                        <strong>当前价格:</strong> ¥${foundCard.price} (${foundCard.change})
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <h3>购买链接:</h3>
+                        <div style="margin: 10px 0;">
+                            <a href="${foundCard.links.ebay}" target="_blank" style="display: inline-block; padding: 8px 16px; background: #007bff; color: white; text-decoration: none; border-radius: 5px; margin: 5px;">eBay 搜索</a>
+                            <a href="${foundCard.links.kartao}" target="_blank" style="display: inline-block; padding: 8px 16px; background: #28a745; color: white; text-decoration: none; border-radius: 5px; margin: 5px;">卡淘 搜索</a>
+                            <a href="${foundCard.links.xianyu}" target="_blank" style="display: inline-block; padding: 8px 16px; background: #ff6b35; color: white; text-decoration: none; border-radius: 5px; margin: 5px;">闲鱼 搜索</a>
+                            <a href="${foundCard.links.doorzo}" target="_blank" style="display: inline-block; padding: 8px 16px; background: #6f42c1; color: white; text-decoration: none; border-radius: 5px; margin: 5px;">日淘任意门</a>
+                            <a href="${foundCard.links.jihuanshe}" target="_blank" style="display: inline-block; padding: 8px 16px; background: #20c997; color: white; text-decoration: none; border-radius: 5px; margin: 5px;">集换社 搜索</a>
+                        </div>
+                        
+                        <h3>最新上架:</h3>
+                        ${foundCard.sampleListings.map(listing => `
+                            <div style="border: 1px solid #ddd; padding: 10px; margin: 10px 0; border-radius: 5px;">
+                                <a href="${listing.link}" target="_blank" style="color: #007bff; text-decoration: none; font-weight: bold;">${listing.title}</a><br>
+                                <strong>平台:</strong> ${listing.platform} | <strong>价格:</strong> ${convertToCNY(listing.price)} | <strong>时间:</strong> ${listing.time}
+                            </div>
+                        `).join('')}
+                        
+                        <hr style="margin: 30px 0;">
+                        <p><small>数据来源: 集换社、PriceCharting、各交易平台 | 更新时间: ${new Date().toLocaleString()}</small></p>
+                    </body>
+                    </html>
+                `);
+                resultWindow.document.close();
+                input.value = '';
+            } else {
+                alert(`未找到包含 "${searchTerm}" 的卡牌\n\n建议搜索关键词：\n• ONEPIECE-MAGAZINE-VOL4 (路飞杂志限定)\n• 020/M-P (皮卡丘麦当劳)\n• smp2-025/024 (吉田侦探SR)\n• 365/SM-P (装甲超梦)\n• ST21-014 (航海王SR异画)\n• PRB02-005 (路飞红牛双DON)\n• REDBULL-EXCLUSIVE (红牛独占红章)`);
+            }
+        }
+
+        // 添加到监控
+        function addToMonitor() {
+            const input = document.getElementById('cardInput');
+            const searchTerm = input.value.trim();
+            
+            if (!searchTerm) {
+                // 没输入直接弹表单
+                openAddModal('');
+                return;
+            }
+            
+            // 先在已有卡牌中查找
+            let matchedCard = null;
+            for (let card of userCards) {
+                if (card.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                    card.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    card.englishName.toLowerCase().includes(searchTerm.toLowerCase())) {
+                    matchedCard = card;
+                    break;
+                }
+            }
+            
+            if (matchedCard) {
+                alert(`ℹ️ 「${matchedCard.name}」已在监控清单中\n编号：${matchedCard.id}\n评级：${matchedCard.grade}`);
+                input.value = '';
+            } else {
+                // 未找到，弹出新增表单并预填编号
+                openAddModal(searchTerm);
+            }
+        }
+
+        // 打开新增卡牌弹窗
+        function openAddModal(prefillId) {
+            document.getElementById('addCardModal').classList.add('active');
+            document.getElementById('ebayLinkInput').value = '';
+            document.getElementById('parseStatus').textContent = '';
+            document.getElementById('newCardId').value = prefillId || '';
+            document.getElementById('newCardName').value = '';
+            document.getElementById('newCardEnglishName').value = '';
+            document.getElementById('newCardGrade').value = 'NM';
+            document.getElementById('newCardRarity').value = 'SR';
+            document.getElementById('newCardSeries').value = '';
+            document.getElementById('newCardPrice').value = '';
+            document.getElementById('newCardImage').value = '';
+            document.getElementById('newCardEbayLink').value = '';
+            setTimeout(() => document.getElementById(prefillId ? 'newCardName' : 'ebayLinkInput').focus(), 100);
+        }
+
+        // 关闭弹窗
+        function closeAddModal() {
+            document.getElementById('addCardModal').classList.remove('active');
+        }
+
+        // 解析eBay链接 - 从标题中提取卡牌信息
+        function parseEbayLink() {
+            const link = document.getElementById('ebayLinkInput').value.trim();
+            const status = document.getElementById('parseStatus');
+            
+            if (!link) {
+                status.textContent = '❌ 请先粘贴eBay链接';
+                return;
+            }
+            
+            // 验证是否为eBay链接
+            if (!link.includes('ebay.com') && !link.includes('ebay.co')) {
+                status.textContent = '❌ 请粘贴有效的eBay商品链接';
+                return;
+            }
+            
+            status.textContent = '⏳ 正在解析...';
+            
+            // 提取商品ID
+            const itemIdMatch = link.match(/itm\/(\d+)/);
+            const ebayItemId = itemIdMatch ? itemIdMatch[1] : '';
+            
+            // 保存eBay链接
+            document.getElementById('newCardEbayLink').value = link;
+            
+            // 尝试通过页面标题解析（使用一个隐藏的方法获取页面标题）
+            // 由于跨域限制，无法直接抓取eBay页面，改为从链接URL中解析关键词
+            // 同时尝试从搜索链接格式中提取
+            const searchMatch = link.match(/_nkw=([^&]+)/);
+            if (searchMatch) {
+                const keywords = decodeURIComponent(searchMatch[1]).replace(/\+/g, ' ');
+                document.getElementById('newCardName').value = keywords;
+                document.getElementById('newCardEnglishName').value = keywords;
+                status.textContent = '✅ 已从搜索链接提取关键词，请补充编号';
+                return;
+            }
+            
+            // 对于商品链接，提取URL路径中的标题
+            const pathMatch = link.match(/\/itm\/([^\/\?]+)/);
+            if (pathMatch && pathMatch[1] && isNaN(pathMatch[1])) {
+                const titleFromUrl = decodeURIComponent(pathMatch[1]).replace(/-/g, ' ');
+                document.getElementById('newCardEnglishName').value = titleFromUrl;
+                
+                // 尝试从标题中提取编号（常见格式如 ST10-006, OP01-120, 020/M-P 等）
+                const cardIdPatterns = [
+                    /\b(ST\d+-\d+)\b/i,
+                    /\b(OP\d+-\d+)\b/i,
+                    /\b(PRB\d+-\d+)\b/i,
+                    /\b(\d+\/[A-Z]+-?[A-Z]?)\b/i,
+                    /\b(smp?\d+-\d+\/\d+)\b/i,
+                    /\b([A-Z]+-\d+[-\/]\d+)\b/i,
+                ];
+                for (const pat of cardIdPatterns) {
+                    const m = titleFromUrl.match(pat);
+                    if (m) {
+                        document.getElementById('newCardId').value = m[1];
+                        break;
+                    }
+                }
+                status.textContent = '✅ 已提取信息，请检查并补充卡牌名称和编号';
+            } else if (ebayItemId) {
+                // 只有商品ID，无法从URL提取标题
+                status.innerHTML = '⚠️ 链接有效(商品#' + ebayItemId + ')，但无法自动提取标题。<br>请手动填写编号和名称，链接已保存。';
+            } else {
+                status.textContent = '⚠️ 无法自动解析，请手动填写卡牌信息';
+            }
+        }
+
+        // 确认添加新卡牌
+        function confirmAddCard() {
+            const id = document.getElementById('newCardId').value.trim();
+            const name = document.getElementById('newCardName').value.trim();
+            const englishName = document.getElementById('newCardEnglishName').value.trim();
+            const grade = document.getElementById('newCardGrade').value.trim() || 'NM';
+            const rarity = document.getElementById('newCardRarity').value.trim() || '';
+            const series = document.getElementById('newCardSeries').value.trim() || '';
+            const priceStr = document.getElementById('newCardPrice').value.trim();
+            const image = document.getElementById('newCardImage').value.trim();
+            const ebayLink = document.getElementById('newCardEbayLink').value.trim();
+            
+            if (!id) { alert('请填写卡牌编号'); return; }
+            if (!name) { alert('请填写卡牌名称'); return; }
+            
+            // 检查是否已存在
+            if (userCards.some(c => c.id.toLowerCase() === id.toLowerCase())) {
+                alert('该编号的卡牌已在监控清单中');
+                return;
+            }
+            
+            // 解析价格（支持 $99 / ¥680 / 680 等格式）
+            let price = 0;
+            if (priceStr) {
+                const numMatch = priceStr.replace(/,/g, '').match(/([\d.]+)/);
+                if (numMatch) {
+                    let num = parseFloat(numMatch[1]);
+                    if (priceStr.startsWith('$')) num = Math.round(num * 7.27);
+                    else if (priceStr.startsWith('AU$')) num = Math.round(num * 4.72);
+                    else if (priceStr.startsWith('CA$')) num = Math.round(num * 5.28);
+                    else if (priceStr.startsWith('£')) num = Math.round(num * 9.35);
+                    else if (priceStr.startsWith('€')) num = Math.round(num * 7.92);
+                    price = Math.round(num);
+                }
+            }
+            
+            const encodedId = encodeURIComponent(id);
+            const encodedName = encodeURIComponent(name);
+            const encodedEnglishName = encodeURIComponent(englishName || name);
+            
+            // 如果有eBay商品链接，加入sampleListings
+            const sampleListings = [];
+            if (ebayLink && ebayLink.includes('ebay')) {
+                sampleListings.push({
+                    platform: 'eBay',
+                    price: priceStr || '价格待查',
+                    title: (englishName || name) + ' ' + id,
+                    link: ebayLink,
+                    time: '手动添加'
+                });
+            }
+            
+            const newCard = {
+                id: id,
+                name: name,
+                englishName: englishName || name,
+                grade: grade,
+                series: series,
+                price: price,
+                avgPrice: price,
+                psa10Pop: 'N/A',
+                lastPrice: 0,
+                change: '新增',
+                rarity: rarity,
+                platforms: ['ebay', '卡淘', '闲鱼', '日淘任意门', '集换社'],
+                image: image || '',
+                links: {
+                    ebay: ebayLink || ('https://www.ebay.com/sch/i.html?_nkw=' + encodedEnglishName + '+' + encodedId),
+                    kartao: 'https://www.cardhobby.com.cn/market?q=' + encodedName,
+                    xianyu: 'https://www.goofish.com/search?q=' + encodedName,
+                    doorzo: 'https://www.doorzo.cn/search?q=' + encodedId,
+                    jihuanshe: 'https://www.jihuanshe.com/search?q=' + encodedId
+                },
+                sampleListings: sampleListings
+            };
+            
+            userCards.push(newCard);
+            saveCards();
+            closeAddModal();
+            document.getElementById('cardInput').value = '';
+            
+            // 刷新所有视图
+            renderWatchlist();
+            renderTopRankings();
+            renderHotPrices();
+            updateStats();
+            
+            alert('✅ 已添加「' + name + '」(' + id + ') 到监控清单！');
+        }
+
+        // 从监控清单移除
+        function removeFromWatchlist(cardId) {
+            const watchlist = JSON.parse(localStorage.getItem('tcgWatchlist') || '[]');
+            const index = watchlist.indexOf(cardId);
+            
+            if (index > -1) {
+                watchlist.splice(index, 1);
+                localStorage.setItem('tcgWatchlist', JSON.stringify(watchlist));
+                renderWatchlist();
+            }
+        }
+
+        // 刷新数据
+        // 刷新数据 — 从Gist云端拉取最新数据（真实操作）
+        function refreshData() {
+            const token = getToken();
+            if (!token) {
+                openTokenModal();
+                return;
+            }
+            alert('🔄 正在从GitHub Gist拉取最新数据...');
+            pullFromGist();
+        }
+
+        // ===== 价格编辑功能 =====
+
+        // 打开价格编辑弹窗
+        function openPriceEditor(cardIndex) {
+            const card = userCards[cardIndex];
+            if (!card) return;
+
+            // 移除已有弹窗
+            const existing = document.getElementById('priceEditModal');
+            if (existing) existing.remove();
+
+            const modal = document.createElement('div');
+            modal.id = 'priceEditModal';
+            modal.innerHTML = `
+                <div class="price-edit-overlay" onclick="closePriceEditor()">
+                    <div class="price-edit-box" onclick="event.stopPropagation()">
+                        <div class="price-edit-header">
+                            <h3>✏️ 编辑价格</h3>
+                            <button onclick="closePriceEditor()" style="background:none;border:none;color:#e8cdd3;font-size:20px;cursor:pointer;">&times;</button>
+                        </div>
+                        <div style="margin-bottom:12px;">
+                            <strong style="color:#e8cdd3;">${card.name}</strong> (${card.id})
+                        </div>
+                        <div class="price-edit-field">
+                            <label>当前现价 (¥)</label>
+                            <input type="number" id="editPrice" value="${card.price || ''}" placeholder="输入人民币价格" min="0">
+                        </div>
+                        <div class="price-edit-field">
+                            <label>全球均价 (¥)</label>
+                            <input type="number" id="editAvgPrice" value="${card.avgPrice || ''}" placeholder="输入均价" min="0">
+                        </div>
+                        <div class="price-edit-field">
+                            <label>涨跌幅</label>
+                            <select id="editChange" style="width:100%;padding:8px;border:1px solid #4a2530;border-radius:6px;background:#2a1520;color:#e8cdd3;font-size:0.9em;">
+                                <option value="+15%" ${card.change === '+15%' ? 'selected' : ''}>📈 大幅上涨 (+15%以上)</option>
+                                <option value="+5%" ${card.change === '+5%' ? 'selected' : ''}>↗️ 上涨 (+1%~15%)</option>
+                                <option value="0%" ${card.change === '0%' || !card.change ? 'selected' : ''}>➡️ 持平</option>
+                                <option value="-5%" ${card.change === '-5%' ? 'selected' : ''}>↘️ 下跌 (-1%~-15%)</option>
+                                <option value="-15%" ${card.change.includes('-') && parseFloat(card.change) <= -15 ? 'selected' : ''}>📉 大幅下跌 (-15%以上)</option>
+                                <option value="新增" ${card.change === '新增' ? 'selected' : ''}>🆕 新增监控</option>
+                            </select>
+                        </div>
+                        <div class="price-edit-field">
+                            <label>价格来源</label>
+                            <input type="text" id="editSource" value="${(card.priceMeta && card.priceMeta.source) || ''}" placeholder="如: eBay成交、卡淘在售、手动录入">
+                        </div>
+                        <div class="price-edit-field">
+                            <label>备注</label>
+                            <textarea id="editNote" rows="2" placeholder="补充说明...">${(card.priceMeta && card.priceMeta.note) || ''}</textarea>
+                        </div>
+                        <div class="price-edit-actions">
+                            <button onclick="savePriceEdit(${cardIndex})" class="btn">💾 保存并同步到云端</button>
+                            <button onclick="closePriceEditor()" class="btn btn-cancel">取消</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // 注入样式（仅首次）
+            if (!document.getElementById('priceEditStyle')) {
+                const style = document.createElement('style');
+                style.id = 'priceEditStyle';
+                style.textContent = `
+                    .price-edit-overlay { position:fixed; top:0;left:0;right:0;bottom:0; background:rgba(0,0,0,0.7); z-index:10000; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
+                    .price-edit-box { background:linear-gradient(135deg,#1e1215,#2a1520); border:1px solid #5c2a3a; border-radius:16px; padding:24px; width:420px; max-width:90vw; box-shadow:0 20px 60px rgba(0,0,0,0.6); }
+                    .price-edit-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+                    .price-edit-header h3 { color:#e8c44a; margin:0; font-size:18px; }
+                    .price-edit-field { margin-bottom:14px; }
+                    .price-edit-field label { display:block; color:#c9a84c; font-size:0.85em; margin-bottom:4px; font-weight:600; }
+                    .price-edit-field input, .price-edit-field textarea, .price-edit-field select { width:100%; padding:10px; border:1px solid #4a2530; border-radius:8px; background:#1a0a0e; color:#e8cdd3; font-size:0.95em; box-sizing:border-box; }
+                    .price-edit-field input:focus, .price-edit-field textarea:focus { outline:none; border-color:#c9a84c; box-shadow:0 0 0 2px rgba(201,168,74,0.2); }
+                    .price-edit-actions { display:flex; gap:10px; margin-top:18px; }
+                    .price-edit-actions .btn { flex:1; padding:10px; text-align:center; font-size:0.9em; }
+                `;
+                document.head.appendChild(style);
+            }
+
+            document.body.appendChild(modal);
+            setTimeout(() => document.getElementById('editPrice').focus(), 100);
+        }
+
+        function closePriceEditor() {
+            const modal = document.getElementById('priceEditModal');
+            if (modal) modal.remove();
+        }
+
+        function savePriceEdit(cardIndex) {
+            const card = userCards[cardIndex];
+            if (!card) return;
+
+            const newPrice = parseInt(document.getElementById('editPrice').value);
+            const newAvgPrice = parseInt(document.getElementById('editAvgPrice').value);
+            const newChange = document.getElementById('editChange').value;
+            const newSource = document.getElementById('editSource').value.trim();
+            const newNote = document.getElementById('editNote').value.trim();
+
+            if (isNaN(newPrice) || newPrice < 0) { alert('请输入有效的价格'); return; }
+
+            card.lastPrice = card.price;
+            card.price = newPrice;
+            if (!isNaN(newAvgPrice) && newAvgPrice > 0) card.avgPrice = newAvgPrice;
+            card.change = newChange;
+
+            if (!card.priceMeta) card.priceMeta = {};
+            card.priceMeta.source = newSource || '手动编辑';
+            card.priceMeta.lastUpdated = new Date().toISOString().split('T')[0];
+            if (newNote) card.priceMeta.note = newNote;
+
+            closePriceEditor();
+            saveCards();
+            initPage();
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', initSync);
+        
+        // 回车键搜索
+        document.getElementById('cardInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchCard();
+            }
+        });
+
+        // 点击弹窗外部关闭
+        document.getElementById('addCardModal').addEventListener('click', function(e) {
+            if (e.target === this) closeAddModal();
+        });
+        // Token弹窗外部关闭
+        document.getElementById('tokenModal').addEventListener('click', function(e) {
+            if (e.target === this) closeTokenModal();
+        });
+        // ESC关闭弹窗
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') { closeAddModal(); closeTokenModal(); }
+        });
+    </script>
+</body>
+</html>
