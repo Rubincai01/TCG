@@ -229,7 +229,7 @@
       <div class="card"><div class="label">监控标的</div><div class="value" id="targetCount">--</div></div>
       <div class="card"><div class="label">命中提醒</div><div class="value" id="alertCount">--</div></div>
       <div class="card"><div class="label">最近更新</div><div class="value" id="updatedAt" style="font-size:18px">--</div></div>
-      <div class="card"><div class="label">数据来源</div><div class="value" style="font-size:16px">腾讯财经</div></div>
+      <div class="card"><div class="label">数据来源</div><div class="value" style="font-size:14px">腾讯财经 + Yahoo</div></div>
     </div>
 
     <!-- table -->
@@ -259,9 +259,10 @@
 
     <div class="footer-note">
       💡 上涨红色，下跌绿色（A股/港股/美股习惯）。已命中的标的会整行高亮。<br/>
-      📱 本页面可直接通过 GitHub Pages 访问，无需启动后端服务器。数据通过腾讯财经接口实时获取。<br/>
+      📱 本页面可直接通过 GitHub Pages 访问，无需启动后端服务器。<br/>
+      🇨🇳 A股 / 港股数据来自腾讯财经接口（实时），美股数据来自 Yahoo Finance v7 接口（准实时）。<br/>
       ☁️ 输入 GitHub Token 可启用跨设备同步（基于 GitHub Gist）。Token 仅存储在浏览器本地。<br/>
-      🇺🇸 美股代码使用大写字母（如 AAPL、TSLA、NVDA），系统自动转小写查询腾讯接口。
+      🇺🇸 美股代码使用大写字母（如 AAPL、TSLA、NVDA），支持盘前盘后价格显示。
     </div>
     <div class="error" id="errorBox"></div>
   </div>
@@ -379,8 +380,60 @@ var DEFAULT_TARGETS = [
 ];
 
 // =====================================================
-// 腾讯财经 JSONP 接口获取实时数据
+// 数据源：A股/港股 = 腾讯财经，美股 = Yahoo Finance
 // =====================================================
+
+// ---------- Yahoo Finance v7 实时行情（美股专用） ----------
+function fetchYahooQuotes(symbols) {
+  // symbols: ['AAPL','TSLA'] 大写字母数组
+  var url = 'https://query1.finance.yahoo.com/v7/finance/quote?symbols=' + symbols.map(function(s){ return s.toUpperCase(); }).join(',');
+  return fetch(url, {
+    method: 'GET',
+    headers: { 'Accept': 'application/json' },
+    mode: 'cors'
+  })
+    .then(function(res) {
+      if (!res.ok) throw new Error('Yahoo HTTP ' + res.status);
+      return res.json();
+    })
+    .then(function(data) {
+      var results = {};
+      if (data.quoteResponse && data.quoteResponse.result) {
+        data.quoteResponse.result.forEach(function(q) {
+          results[q.symbol.toUpperCase()] = q;
+        });
+      }
+      return results;
+    });
+}
+
+function parseYahooQuote(q) {
+  if (!q) return null;
+  var price = q.regularMarketPrice || q.currentPrice || null;
+  var prevClose = q.regularMarketPreviousClose || null;
+  var change = (price !== null && prevClose !== null) ? (price - prevClose) : null;
+  var changePct = (change !== null && prevClose && prevClose !== 0) ? ((change / prevClose) * 100) : null;
+
+  return {
+    name: q.shortName || q.longName || q.symbol || '',
+    code: q.symbol || '',
+    price: price,
+    prevClose: prevClose,
+    open: q.regularMarketOpen || null,
+    change: change,
+    changePct: changePct,
+    high: q.regularMarketDayHigh || q.fiftyTwoWeekHigh || null,
+    low: q.regularMarketDayLow || q.fiftyTwoWeekLow || null,
+    volume: q.regularMarketVolume ? String(q.regularMarketVolume) : null,
+    amount: null,
+    // 额外字段
+    marketState: q.marketState || '', // "REGULAR" / "CLOSE" / "POST" / "PRE"
+    postMarketPrice: q.postMarketPrice || null,
+    postMarketChangePercent: q.postMarketChangePercent || null
+  };
+}
+
+// ---------- 腾讯财经接口（A股/港股专用） ----------
 function buildQueryCode(target) {
   var sym = target.symbol;
   var mkt = target.market;
@@ -452,8 +505,39 @@ function parseQuote(dataStr, market) {
   };
 }
 
+// 通用行构建（兼容腾讯 + Yahoo 格式）
+function buildRow(target, quote) {
+  var row = {
+    name: target.name || (quote ? quote.name : target.symbol),
+    symbol: target.symbol,
+    market: target.market,
+    price: quote ? quote.price : null,
+    change: quote ? quote.change : null,
+    change_pct: quote ? quote.changePct : null,
+    entry_price: target.entry_price,
+    exit_price: target.exit_price,
+    stop_loss_price: target.stop_loss_price || null,
+    entry_met: false,
+    exit_met: false,
+    stop_loss_met: false
+  };
+
+  // 判断入场/止盈/止损
+  if (quote && row.entry_price !== null && row.entry_price !== undefined) {
+    row.entry_met = quote.price <= row.entry_price;
+  }
+  if (quote && row.exit_price !== null && row.exit_price !== undefined) {
+    row.exit_met = quote.price >= row.exit_price;
+  }
+  if (quote && row.stop_loss_price !== null && row.stop_loss_price !== undefined) {
+    row.stop_loss_met = quote.price <= row.stop_loss_price;
+  }
+
+  return row;
+}
+
 // =====================================================
-// 主要数据刷新
+// 主要数据刷新（美股走 Yahoo Finance，A股/港股走腾讯）
 // =====================================================
 async function refreshData() {
   var errorBox = document.getElementById('errorBox');
@@ -468,50 +552,65 @@ async function refreshData() {
     return;
   }
 
-  // 构建查询代码
+  // 按市场分组
+  var usTargets = targets.filter(function(t) { return t.market === 'US'; });
+  var ahTargets = targets.filter(function(t) { return t.market !== 'US'; });
+
+  // 构建腾讯查询代码（仅 A/HK 股）
   var codeMap = {};
-  targets.forEach(function(t) {
+  ahTargets.forEach(function(t) {
     var code = buildQueryCode(t);
     codeMap[code] = t;
   });
-
-  var codes = Object.keys(codeMap);
+  var tencentCodes = Object.keys(codeMap);
 
   try {
-    var results = await fetchQuoteJSONP(codes);
+    // 并行请求两个数据源
+    var promises = [];
+    if (tencentCodes.length > 0) {
+      promises.push(
+        fetchQuoteJSONP(tencentCodes).then(function(r) { return { source: 'tencent', data: r }; })
+      );
+    }
+    if (usTargets.length > 0) {
+      var usSymbols = usTargets.map(function(t) { return t.symbol; });
+      promises.push(
+        fetchYahooQuotes(usSymbols).then(function(r) { return { source: 'yahoo', data: r }; }).catch(function(e) {
+          console.warn('[Yahoo] 美股数据获取失败:', e.message);
+          return { source: 'yahoo', data: {}, error: e.message };
+        })
+      );
+    }
+
+    var resultsList = await Promise.all(promises);
+    var tencentResults = {};
+    var yahooResults = {};
+    resultsList.forEach(function(item) {
+      if (item.source === 'tencent') tencentResults = item.data;
+      if (item.source === 'yahoo') yahooResults = item.data;
+    });
+
+    // 合并所有行
     var rows = [];
     var alertCount = 0;
 
-    codes.forEach(function(code) {
+    // ---- A/HK 行（腾讯数据）----
+    tencentCodes.forEach(function(code) {
       var target = codeMap[code];
-      var quote = parseQuote(results[code], target.market);
+      var quote = parseQuote(tencentResults[code], target.market);
 
-      var row = {
-        name: target.name || (quote ? quote.name : target.symbol),
-        symbol: target.symbol,
-        market: target.market,
-        price: quote ? quote.price : null,
-        change: quote ? quote.change : null,
-        change_pct: quote ? quote.changePct : null,
-        entry_price: target.entry_price,
-        exit_price: target.exit_price,
-        stop_loss_price: target.stop_loss_price || null,
-        entry_met: false,
-        exit_met: false,
-        stop_loss_met: false
-      };
+      var row = buildRow(target, quote);
+      if (row.entry_met || row.exit_met || row.stop_loss_met) alertCount++;
+      rows.push(row);
+    });
 
-      // 判断入场/止盈/止损
-      if (quote && row.entry_price !== null && row.entry_price !== undefined) {
-        row.entry_met = quote.price <= row.entry_price;
-      }
-      if (quote && row.exit_price !== null && row.exit_price !== undefined) {
-        row.exit_met = quote.price >= row.exit_price;
-      }
-      if (quote && row.stop_loss_price !== null && row.stop_loss_price !== undefined) {
-        row.stop_loss_met = quote.price <= row.stop_loss_price;
-      }
+    // ---- 美股行（Yahoo 数据）----
+    usTargets.forEach(function(target) {
+      var yahooKey = target.symbol.toUpperCase();
+      var yq = yahooResults[yahooKey] || null;
+      var quote = parseYahooQuote(yq);
 
+      var row = buildRow(target, quote);
       if (row.entry_met || row.exit_met || row.stop_loss_met) alertCount++;
       rows.push(row);
     });
@@ -529,14 +628,27 @@ async function refreshData() {
 
     renderRows(rows);
 
-    // 更新名称回写（如果腾讯接口返回了更好的名称）
+    // 更新名称回写（如果接口返回了更好的名称）
     var needSave = false;
-    codes.forEach(function(code) {
+    // A/HK 名称回写（腾讯）
+    tencentCodes.forEach(function(code) {
       var target = codeMap[code];
-      var quote = parseQuote(results[code], target.market);
+      var quote = parseQuote(tencentResults[code], target.market);
       if (quote && quote.name && (!target.name || target.name === target.symbol)) {
         target.name = quote.name;
         needSave = true;
+      }
+    });
+    // 美股名称回写（Yahoo）
+    usTargets.forEach(function(target) {
+      var yahooKey = target.symbol.toUpperCase();
+      var yq = yahooResults[yahooKey] || null;
+      if (yq && (yq.shortName || yq.longName)) {
+        var betterName = yq.shortName || yq.longName;
+        if (!target.name || target.name === target.symbol) {
+          target.name = betterName;
+          needSave = true;
+        }
       }
     });
     if (needSave) saveLocal();
