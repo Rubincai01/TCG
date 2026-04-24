@@ -229,7 +229,7 @@
       <div class="card"><div class="label">监控标的</div><div class="value" id="targetCount">--</div></div>
       <div class="card"><div class="label">命中提醒</div><div class="value" id="alertCount">--</div></div>
       <div class="card"><div class="label">最近更新</div><div class="value" id="updatedAt" style="font-size:18px">--</div></div>
-      <div class="card"><div class="label">数据来源</div><div class="value" style="font-size:14px">腾讯财经 + Yahoo</div></div>
+      <div class="card"><div class="label">数据来源</div><div class="value" style="font-size:14px">腾讯财经（全市场）</div></div>
     </div>
 
     <!-- table -->
@@ -260,9 +260,9 @@
     <div class="footer-note">
       💡 上涨红色，下跌绿色（A股/港股/美股习惯）。已命中的标的会整行高亮。<br/>
       📱 本页面可直接通过 GitHub Pages 访问，无需启动后端服务器。<br/>
-      🇨🇳 A股 / 港股数据来自腾讯财经接口（实时），美股数据来自 Yahoo Finance v7 接口（准实时）。<br/>
+      🇨🇳 A股 / 港股 / 美股 数据统一来自腾讯财经接口（实时行情，含美股盘中与收盘价）。<br/>
       ☁️ 输入 GitHub Token 可启用跨设备同步（基于 GitHub Gist）。Token 仅存储在浏览器本地。<br/>
-      🇺🇸 美股代码使用大写字母（如 AAPL、TSLA、NVDA），支持盘前盘后价格显示。
+      🇺🇸 美股代码使用大写字母（如 AAPL、TSLA、NVDA、QUBT、QBTS、RR），无需后缀。
     </div>
     <div class="error" id="errorBox"></div>
   </div>
@@ -380,65 +380,19 @@ var DEFAULT_TARGETS = [
 ];
 
 // =====================================================
-// 数据源：A股/港股 = 腾讯财经，美股 = Yahoo Finance
+// 数据源：A股 / 港股 / 美股 统一走腾讯财经接口
+// 说明：
+//   - Yahoo Finance v7 对匿名请求限流返回 429，无法在前端直接使用
+//   - 腾讯财经美股接口完整覆盖 NASDAQ/NYSE，前缀 us + 大写代码
+//   - 美股盘前盘后价格暂不支持（腾讯接口只提供盘中与收盘价）
 // =====================================================
 
-// ---------- Yahoo Finance v7 实时行情（美股专用） ----------
-function fetchYahooQuotes(symbols) {
-  // symbols: ['AAPL','TSLA'] 大写字母数组
-  var url = 'https://query1.finance.yahoo.com/v7/finance/quote?symbols=' + symbols.map(function(s){ return s.toUpperCase(); }).join(',');
-  return fetch(url, {
-    method: 'GET',
-    headers: { 'Accept': 'application/json' },
-    mode: 'cors'
-  })
-    .then(function(res) {
-      if (!res.ok) throw new Error('Yahoo HTTP ' + res.status);
-      return res.json();
-    })
-    .then(function(data) {
-      var results = {};
-      if (data.quoteResponse && data.quoteResponse.result) {
-        data.quoteResponse.result.forEach(function(q) {
-          results[q.symbol.toUpperCase()] = q;
-        });
-      }
-      return results;
-    });
-}
-
-function parseYahooQuote(q) {
-  if (!q) return null;
-  var price = q.regularMarketPrice || q.currentPrice || null;
-  var prevClose = q.regularMarketPreviousClose || null;
-  var change = (price !== null && prevClose !== null) ? (price - prevClose) : null;
-  var changePct = (change !== null && prevClose && prevClose !== 0) ? ((change / prevClose) * 100) : null;
-
-  return {
-    name: q.shortName || q.longName || q.symbol || '',
-    code: q.symbol || '',
-    price: price,
-    prevClose: prevClose,
-    open: q.regularMarketOpen || null,
-    change: change,
-    changePct: changePct,
-    high: q.regularMarketDayHigh || q.fiftyTwoWeekHigh || null,
-    low: q.regularMarketDayLow || q.fiftyTwoWeekLow || null,
-    volume: q.regularMarketVolume ? String(q.regularMarketVolume) : null,
-    amount: null,
-    // 额外字段
-    marketState: q.marketState || '', // "REGULAR" / "CLOSE" / "POST" / "PRE"
-    postMarketPrice: q.postMarketPrice || null,
-    postMarketChangePercent: q.postMarketChangePercent || null
-  };
-}
-
-// ---------- 腾讯财经接口（A股/港股专用） ----------
+// ---------- 腾讯财经接口（A股 / 港股 / 美股统一） ----------
 function buildQueryCode(target) {
-  var sym = target.symbol;
+  var sym = (target.symbol || '').trim();
   var mkt = target.market;
   if (mkt === 'HK') return 'r_hk' + sym;
-  if (mkt === 'US') return 'us' + sym.toLowerCase();
+  if (mkt === 'US') return 'us' + sym.toUpperCase();
   if (mkt === 'A') {
     // A股根据代码判断：0/2/3开头为深市，6开头为沪市
     if (/^(0|2|3)\d{5}$/.test(sym) || /^002\d{3}$/.test(sym)) {
@@ -473,6 +427,8 @@ function fetchQuoteJSONP(codes) {
         if (!line) return;
         var m = line.match(/^v_(\w+)="(.*)"/);
         if (m) {
+          // key 统一转小写，便于和 buildQueryCode 的输出匹配（buildQueryCode 的 US 是大写）
+          // 所以这里保留原样，匹配时双向做一次 toLowerCase / toUpperCase 容错
           results[m[1]] = m[2];
         }
       });
@@ -480,6 +436,17 @@ function fetchQuoteJSONP(codes) {
     });
 }
 
+// 腾讯行情字段位置（~分隔）：
+//   [1]  名称
+//   [2]  代码
+//   [3]  最新价
+//   [4]  昨收
+//   [5]  今开
+//   [6]  成交量
+//   [33] 最高
+//   [34] 最低
+//   [37] 成交额
+// 美股返回名称可能带乱码（GBK 解不全英文公司名），自动回退到 target.name
 function parseQuote(dataStr, market) {
   if (!dataStr) return null;
   var parts = dataStr.split('~');
@@ -487,6 +454,7 @@ function parseQuote(dataStr, market) {
 
   var price = parseFloat(parts[3]);
   var prevClose = parseFloat(parts[4]);
+  if (!isFinite(price) || !isFinite(prevClose)) return null;
   var change = price - prevClose;
   var changePct = prevClose ? ((change / prevClose) * 100) : 0;
 
@@ -505,7 +473,7 @@ function parseQuote(dataStr, market) {
   };
 }
 
-// 通用行构建（兼容腾讯 + Yahoo 格式）
+// 通用行构建
 function buildRow(target, quote) {
   var row = {
     name: target.name || (quote ? quote.name : target.symbol),
@@ -537,7 +505,7 @@ function buildRow(target, quote) {
 }
 
 // =====================================================
-// 主要数据刷新（美股走 Yahoo Finance，A股/港股走腾讯）
+// 主要数据刷新（A股 / 港股 / 美股 统一走腾讯）
 // =====================================================
 async function refreshData() {
   var errorBox = document.getElementById('errorBox');
@@ -552,63 +520,26 @@ async function refreshData() {
     return;
   }
 
-  // 按市场分组
-  var usTargets = targets.filter(function(t) { return t.market === 'US'; });
-  var ahTargets = targets.filter(function(t) { return t.market !== 'US'; });
-
-  // 构建腾讯查询代码（仅 A/HK 股）
+  // 统一走腾讯财经：A / HK / US 全部通过 qt.gtimg.cn
   var codeMap = {};
-  ahTargets.forEach(function(t) {
+  targets.forEach(function(t) {
     var code = buildQueryCode(t);
     codeMap[code] = t;
   });
   var tencentCodes = Object.keys(codeMap);
 
   try {
-    // 并行请求两个数据源
-    var promises = [];
-    if (tencentCodes.length > 0) {
-      promises.push(
-        fetchQuoteJSONP(tencentCodes).then(function(r) { return { source: 'tencent', data: r }; })
-      );
-    }
-    if (usTargets.length > 0) {
-      var usSymbols = usTargets.map(function(t) { return t.symbol; });
-      promises.push(
-        fetchYahooQuotes(usSymbols).then(function(r) { return { source: 'yahoo', data: r }; }).catch(function(e) {
-          console.warn('[Yahoo] 美股数据获取失败:', e.message);
-          return { source: 'yahoo', data: {}, error: e.message };
-        })
-      );
-    }
-
-    var resultsList = await Promise.all(promises);
-    var tencentResults = {};
-    var yahooResults = {};
-    resultsList.forEach(function(item) {
-      if (item.source === 'tencent') tencentResults = item.data;
-      if (item.source === 'yahoo') yahooResults = item.data;
-    });
+    var tencentResults = tencentCodes.length > 0
+      ? await fetchQuoteJSONP(tencentCodes)
+      : {};
 
     // 合并所有行
     var rows = [];
     var alertCount = 0;
 
-    // ---- A/HK 行（腾讯数据）----
     tencentCodes.forEach(function(code) {
       var target = codeMap[code];
       var quote = parseQuote(tencentResults[code], target.market);
-
-      var row = buildRow(target, quote);
-      if (row.entry_met || row.exit_met || row.stop_loss_met) alertCount++;
-      rows.push(row);
-    });
-
-    // ---- 美股行（Yahoo 数据）----
-    usTargets.forEach(function(target) {
-      var yahooKey = target.symbol.toUpperCase();
-      var yq = yahooResults[yahooKey] || null;
-      var quote = parseYahooQuote(yq);
 
       var row = buildRow(target, quote);
       if (row.entry_met || row.exit_met || row.stop_loss_met) alertCount++;
@@ -628,27 +559,28 @@ async function refreshData() {
 
     renderRows(rows);
 
-    // 更新名称回写（如果接口返回了更好的名称）
+    // 名称回写：A / HK / US 统一处理
+    // 美股腾讯返回名称有时会出现 GBK 乱码，这里仅在：
+    //   1) target.name 为空 或 等于 symbol
+    //   2) 解析出的 name 是纯 ASCII/英文/包含字母
+    // 时才回写，避免把乱码写入本地配置
     var needSave = false;
-    // A/HK 名称回写（腾讯）
     tencentCodes.forEach(function(code) {
       var target = codeMap[code];
       var quote = parseQuote(tencentResults[code], target.market);
-      if (quote && quote.name && (!target.name || target.name === target.symbol)) {
-        target.name = quote.name;
-        needSave = true;
-      }
-    });
-    // 美股名称回写（Yahoo）
-    usTargets.forEach(function(target) {
-      var yahooKey = target.symbol.toUpperCase();
-      var yq = yahooResults[yahooKey] || null;
-      if (yq && (yq.shortName || yq.longName)) {
-        var betterName = yq.shortName || yq.longName;
-        if (!target.name || target.name === target.symbol) {
-          target.name = betterName;
+      if (!quote || !quote.name) return;
+      if (target.name && target.name !== target.symbol) return;
+
+      var nm = quote.name;
+      if (target.market === 'US') {
+        // 美股：只在英文名称可读时写入
+        if (/^[\x20-\x7E]+$/.test(nm)) {
+          target.name = nm;
           needSave = true;
         }
+      } else {
+        target.name = nm;
+        needSave = true;
       }
     });
     if (needSave) saveLocal();
@@ -656,7 +588,6 @@ async function refreshData() {
   } catch(e) {
     errorBox.textContent = '刷新失败：' + e.message;
     console.error('Refresh error:', e);
-    // 显示详细错误信息用于调试
     if (targets.length > 0) {
       document.getElementById('tableBody').innerHTML = '<tr><td colspan="12" style="text-align:center;padding:30px;color:var(--red)">数据获取失败: ' + e.message + '<br/><small>请检查网络连接或股票代码</small><br/><button onclick="refreshData()" style="margin-top:10px;padding:5px 10px;border-radius:5px;border:none;background:#2d6df6;color:white;cursor:pointer;">重试</button></td></tr>';
     }
